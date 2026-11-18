@@ -1,0 +1,30 @@
+# Android / Gradle build artifacts
+.gradle/
+build/
+*/build/
+local.properties
+*.iml
+.idea/
+*.keystore
+*.jks
+
+# Kotlin / Java
+*.class
+*.jar
+*.aar
+
+# Android Studio
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets (never commit these)
+google-services.json
+*.p12
+keystore.properties
