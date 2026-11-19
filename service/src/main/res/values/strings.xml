@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="service_input_label">Titan Mapper Input Service</string>
+    <string name="accessibility_service_label">Titan Mapper Remapping</string>
+    <string name="accessibility_service_description">Lets Titan Mapper intercept hardware key presses system-wide and perform touch gestures on your behalf, so your keyboard and mouse bindings work outside the Titan Mapper app. It does not read screen content.</string>
+</resources>
