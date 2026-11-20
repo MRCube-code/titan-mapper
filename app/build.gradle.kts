@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,6 +7,21 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
 }
+
+// Release signing: reads from (in priority order) environment variables — set as GitHub Actions
+// secrets in CI — or a local, gitignored keystore.properties file for signing on a developer
+// machine. Neither is required: if nothing is configured, the release build type falls back to
+// debug signing so `assembleRelease` still produces an installable APK.
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) keystorePropertiesFile.inputStream().use { load(it) }
+}
+
+fun releaseSigningValue(envName: String, propName: String): String? =
+    System.getenv(envName)?.takeIf { it.isNotBlank() } ?: keystoreProperties.getProperty(propName)
+
+val releaseStoreFilePath = releaseSigningValue("RELEASE_STORE_FILE", "storeFile")
+val hasReleaseSigning = releaseStoreFilePath != null
 
 android {
     namespace = "com.titanmapper.app"
@@ -19,10 +36,26 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(releaseStoreFilePath!!)
+                storePassword = releaseSigningValue("RELEASE_STORE_PASSWORD", "storePassword")
+                keyAlias = releaseSigningValue("RELEASE_KEY_ALIAS", "keyAlias")
+                keyPassword = releaseSigningValue("RELEASE_KEY_PASSWORD", "keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = if (hasReleaseSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 
