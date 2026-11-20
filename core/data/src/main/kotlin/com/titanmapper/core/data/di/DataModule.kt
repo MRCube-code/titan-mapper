@@ -62,7 +62,7 @@ object DataProvidesModule {
     fun io(): CoroutineDispatcher = Dispatchers.IO
 
     @Provides @DefaultDispatcher
-    fun default(): CoroutineDispatcher = Dispatchers.Default
+    fun defaultDispatcher(): CoroutineDispatcher = Dispatchers.Default
 
     @Provides @Singleton @ApplicationScope
     fun applicationScope(@DefaultDispatcher dispatcher: CoroutineDispatcher): CoroutineScope =
