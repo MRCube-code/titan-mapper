@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 and below backup rules (superseded by data_extraction_rules on 12+). -->
+<full-backup-content>
+    <exclude domain="database" path="titan_database" />
+    <exclude domain="sharedpref" path="titan_settings.preferences_pb" />
+</full-backup-content>
