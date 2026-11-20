@@ -27,6 +27,9 @@ jobs:
           gradle-version: "8.11.1"
           cache-read-only: false
 
+      - name: Resolve Android SDK path
+        run: echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+
       - name: Cache Android SDK packages
         uses: actions/cache@v4
         with:
