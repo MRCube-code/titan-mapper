@@ -22,6 +22,7 @@ import com.titanmapper.core.model.MappingProfile
 import com.titanmapper.core.model.OverlayLayout
 import com.titanmapper.core.model.ProfileColor
 import com.titanmapper.core.model.SensitivityPreset
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
