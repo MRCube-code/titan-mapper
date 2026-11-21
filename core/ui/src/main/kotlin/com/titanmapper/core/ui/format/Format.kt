@@ -1,6 +1,7 @@
 package com.titanmapper.core.ui.format
 
 import com.titanmapper.core.model.ActionMode
+import com.titanmapper.core.model.CaptureTier
 import com.titanmapper.core.model.InputTrigger
 import com.titanmapper.core.model.KeyAction
 import com.titanmapper.core.model.KeyCode
@@ -115,6 +116,13 @@ fun PermissionTier.displayName(): String = when (this) {
     PermissionTier.ACCESSIBILITY -> "Accessibility"
     PermissionTier.SHIZUKU -> "Shizuku"
     PermissionTier.ROOT -> "Root"
+}
+
+fun CaptureTier.displayName(): String = when (this) {
+    CaptureTier.STANDARD -> "Standard"
+    CaptureTier.ACCESSIBILITY -> "Accessibility"
+    CaptureTier.SHIZUKU -> "Shizuku"
+    CaptureTier.ROOT -> "Root"
 }
 
 /** Plain-language capability/limit summary shown wherever a tier can be chosen. */

@@ -39,8 +39,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.titanmapper.core.model.ActionMode
 import com.titanmapper.core.model.Binding
+import com.titanmapper.core.model.CaptureTier
 import com.titanmapper.core.model.InputTrigger
-import com.titanmapper.core.model.PermissionTier
 import com.titanmapper.core.ui.components.EmptyState
 import com.titanmapper.core.ui.components.LabeledSlider
 import com.titanmapper.core.ui.components.StatusChip
@@ -122,12 +122,12 @@ fun MappingEditorRoute(
 }
 
 @Composable
-private fun ProfileSettingsCard(priority: Int, tier: PermissionTier, onEvent: (MappingEditorUiEvent) -> Unit) {
+private fun ProfileSettingsCard(priority: Int, tier: CaptureTier, onEvent: (MappingEditorUiEvent) -> Unit) {
     TitanCard {
         Text("Profile settings", style = MaterialTheme.typography.titleMedium)
         Text("Permission tier", style = MaterialTheme.typography.bodyMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(TitanSpacing.s)) {
-            PermissionTier.entries.forEach { t ->
+            CaptureTier.entries.forEach { t ->
                 FilterChip(selected = tier == t, onClick = { onEvent(MappingEditorUiEvent.SetTier(t)) }, label = { Text(t.displayName()) })
             }
         }

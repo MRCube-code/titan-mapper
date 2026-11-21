@@ -63,8 +63,8 @@ internal object EditorKeyCodeTranslator {
 @Composable
 fun TriggerCaptureBox(
     label: String,
-    onKeyCaptured: (KeyCode) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onKeyCaptured: (KeyCode) -> Unit
 ) {
     val focusRequester = remember { FocusRequester() }
     Box(

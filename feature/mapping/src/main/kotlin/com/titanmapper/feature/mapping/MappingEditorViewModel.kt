@@ -8,11 +8,11 @@ import com.titanmapper.core.data.repository.MacroRepository
 import com.titanmapper.core.data.repository.ProfileRepository
 import com.titanmapper.core.model.ActionMode
 import com.titanmapper.core.model.Binding
+import com.titanmapper.core.model.CaptureTier
 import com.titanmapper.core.model.InputTrigger
 import com.titanmapper.core.model.MacroDefinition
 import com.titanmapper.core.model.MappedAction
 import com.titanmapper.core.model.MappingProfile
-import com.titanmapper.core.model.PermissionTier
 import com.titanmapper.core.model.SensitivityPreset
 import com.titanmapper.service.api.PluginInfo
 import com.titanmapper.service.api.PluginRegistry
@@ -35,7 +35,7 @@ data class MappingEditorUiState(
     val saveError: String? = null
 ) {
     /** What the profile's chosen tier can actually perform — drives the warning chip in the action picker. */
-    val tierCapabilities: TierCapability get() = TierCapability.of(profile?.permissionTier ?: PermissionTier.STANDARD)
+    val tierCapabilities: TierCapability get() = TierCapability.of(profile?.permissionTier ?: CaptureTier.STANDARD)
 }
 
 enum class TierCapability {
@@ -50,10 +50,10 @@ enum class TierCapability {
     }
 
     companion object {
-        fun of(tier: PermissionTier): TierCapability = when (tier) {
-            PermissionTier.STANDARD -> TOUCH_ONLY
-            PermissionTier.ACCESSIBILITY -> TOUCH_AND_SYSTEM
-            PermissionTier.SHIZUKU, PermissionTier.ROOT -> FULL
+        fun of(tier: CaptureTier): TierCapability = when (tier) {
+            CaptureTier.STANDARD -> TOUCH_ONLY
+            CaptureTier.ACCESSIBILITY -> TOUCH_AND_SYSTEM
+            CaptureTier.SHIZUKU, CaptureTier.ROOT -> FULL
         }
     }
 }
@@ -63,7 +63,7 @@ sealed interface MappingEditorUiEvent {
     data class SetTargetPackage(val packageName: String?) : MappingEditorUiEvent
     data class SetDeviceFingerprint(val id: String?) : MappingEditorUiEvent
     data class SetPriority(val priority: Int) : MappingEditorUiEvent
-    data class SetTier(val tier: PermissionTier) : MappingEditorUiEvent
+    data class SetTier(val tier: CaptureTier) : MappingEditorUiEvent
     data class SetSensitivity(val preset: SensitivityPreset) : MappingEditorUiEvent
     data class BeginEditBinding(val bindingId: String?) : MappingEditorUiEvent // null closes, "" = new
     data class SaveBinding(val binding: Binding) : MappingEditorUiEvent

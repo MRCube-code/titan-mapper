@@ -136,7 +136,7 @@ class OverlayEditorViewModel @Inject constructor(
         viewModelScope.launch {
             val p = repository.save(portraitLayout.value)
             val l = repository.save(landscapeLayout.value)
-            val err = listOf(p, l).filterIsInstance<DataResult.Error<*>>().firstOrNull()
+            val err = listOf(p, l).filterIsInstance<DataResult.Error>().firstOrNull()
             saveError.value = err?.message
         }
     }
