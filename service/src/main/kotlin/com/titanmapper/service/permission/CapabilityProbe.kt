@@ -54,7 +54,12 @@ class CapabilityProbe @Inject constructor(
         val expected = "${context.packageName}/${TitanAccessibilityService::class.java.name}"
         val enabled = Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: return false
         val splitter = TextUtils.SimpleStringSplitter(':').apply { setString(enabled) }
-        return splitter.asSequence().any { it.equals(expected, ignoreCase = true) }
+        // SimpleStringSplitter implements both Iterator<String> and Iterable<String>, which makes
+        // .asSequence()/.any{} ambiguous between the two stdlib extension overloads; iterate directly.
+        while (splitter.hasNext()) {
+            if (splitter.next().equals(expected, ignoreCase = true)) return true
+        }
+        return false
     }
 
     private fun isShizukuAvailable(): Boolean = try {

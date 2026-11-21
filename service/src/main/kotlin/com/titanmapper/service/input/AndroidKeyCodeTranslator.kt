@@ -16,7 +16,6 @@ object AndroidKeyCodeTranslator {
     fun toAndroid(key: KeyCode): Int? = TITAN_TO_ANDROID[key]
 
     private val ANDROID_TO_TITAN: Map<Int, KeyCode> = buildMap {
-        fun put(android: Int, titan: KeyCode) { put(android, titan) }
         put(KeyEvent.KEYCODE_A, KeyCode.A); put(KeyEvent.KEYCODE_B, KeyCode.B)
         put(KeyEvent.KEYCODE_C, KeyCode.C); put(KeyEvent.KEYCODE_D, KeyCode.D)
         put(KeyEvent.KEYCODE_E, KeyCode.E); put(KeyEvent.KEYCODE_F, KeyCode.F)

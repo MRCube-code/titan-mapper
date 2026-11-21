@@ -46,7 +46,7 @@ class ShizukuTier @Inject constructor(
 
         override fun dispatch(action: MappedAction, phase: DispatchPhase): Boolean = try {
             when (action) {
-                is MappedAction.KeyInjection -> injectKey(action.key, phase)
+                is MappedAction.KeyInjection -> injectKey(AndroidKeyCodeTranslator.toAndroid(action.key), phase)
                 is MappedAction.MouseInjection.Move -> injectMouseMove(action.deltaX, action.deltaY)
                 is MappedAction.MouseInjection.ButtonPress -> injectMouseButton(action.button, phase)
                 is MappedAction.SystemAction -> injectSystemAction(action.type)
