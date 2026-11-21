@@ -115,7 +115,30 @@ fun TitanNavHost() {
 private fun NavGraph(navController: androidx.navigation.NavHostController, modifier: Modifier = Modifier) {
     NavHost(navController = navController, startDestination = TopLevelRoute.DASHBOARD.route, modifier = modifier) {
         composable(TopLevelRoute.DASHBOARD.route) {
-            DashboardRoute()
+            DashboardRoute(
+                onOpenDevices = {
+                    navController.navigate(TopLevelRoute.DEVICES.route) {
+                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                onOpenProfiles = {
+                    navController.navigate(TopLevelRoute.PROFILES.route) {
+                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                onOpenDiagnostics = { navController.navigate("diagnostics") },
+                onOpenSettings = {
+                    navController.navigate(TopLevelRoute.SETTINGS.route) {
+                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+            )
         }
         composable(TopLevelRoute.PROFILES.route) {
             ProfilesRoute(
