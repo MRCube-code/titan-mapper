@@ -1,5 +1,6 @@
 package com.titanmapper.feature.dashboard
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.titanmapper.core.model.CapabilitySnapshot
@@ -12,7 +13,9 @@ import com.titanmapper.service.api.PerformanceMonitor
 import com.titanmapper.service.api.PerformanceSnapshot
 import com.titanmapper.service.api.ServiceController
 import com.titanmapper.service.api.ServiceState
+import com.titanmapper.service.services.TitanInputService
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -35,6 +38,9 @@ sealed interface DashboardUiEvent {
 
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
+    // Only read for display (uiState below). Never call start()/stop() on this directly from the
+    // UI layer -- see onEvent's ToggleService/SelectTier handling for why.
     private val controller: ServiceController,
     private val capabilityMonitor: CapabilityMonitor,
     private val latencyMonitor: LatencyMonitor,
@@ -53,13 +59,26 @@ class DashboardViewModel @Inject constructor(
 
     fun onEvent(event: DashboardUiEvent) {
         when (event) {
-            DashboardUiEvent.ToggleService -> if (uiState.value.service.running) controller.stop() else controller.start()
+            // The pipeline (ServiceController / PipelineCoordinator) must only ever be started or
+            // stopped BY TitanInputService itself, from its onStartCommand/onDestroy -- never
+            // directly from the UI. Routing through the service is what actually posts the
+            // foreground notification and gives the process the foreground-service lifetime
+            // guarantee; calling controller.start() here would run the pipeline with no
+            // foreground service behind it, which Android can and will kill as soon as the app
+            // is backgrounded.
+            DashboardUiEvent.ToggleService -> if (uiState.value.service.running) {
+                TitanInputService.stop(context)
+            } else {
+                TitanInputService.start(context)
+            }
             DashboardUiEvent.RefreshCapabilities -> capabilityMonitor.refresh()
             is DashboardUiEvent.SelectTier -> viewModelScope.launch {
                 settings.update { it.copy(preferredTier = event.tier) }
                 if (uiState.value.service.running) {
-                    controller.stop()
-                    controller.start()
+                    // A running pipeline doesn't pick up a new preferredTier by itself; cycle the
+                    // whole foreground service so it restarts on the newly selected tier.
+                    TitanInputService.stop(context)
+                    TitanInputService.start(context)
                 }
             }
         }

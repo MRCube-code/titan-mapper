@@ -34,10 +34,18 @@ class TitanInputService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val notification = buildNotification()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
+        when {
+            // FOREGROUND_SERVICE_TYPE_SPECIAL_USE only exists as a real, OS-recognized type from
+            // Android 14 (UPSIDE_DOWN_CAKE) onward -- the manifest's android:foregroundServiceType
+            //="specialUse" is likewise only validated on 14+. Passing that flag on Android 10-13
+            // (Q..TIRAMISU) is not meaningful there: the type system for foreground services on
+            // those releases doesn't understand "special use", so we start untyped instead.
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE ->
+                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ->
+                startForeground(NOTIFICATION_ID, notification, 0)
+            else ->
+                startForeground(NOTIFICATION_ID, notification)
         }
         controller.start()
         return START_STICKY // the crash-recovery worker also restarts us; this covers plain OS kills

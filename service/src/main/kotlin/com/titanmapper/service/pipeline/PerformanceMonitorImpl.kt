@@ -23,12 +23,17 @@ class PerformanceMonitorImpl @Inject constructor(
 
     private val eventsThisSecond = AtomicInteger(0)
     private val startedAt = System.currentTimeMillis()
-    private var job: kotlinx.coroutines.Job? = null
+
+    // Both the event counter AND the snapshot ticker must be retained here so stop() can cancel
+    // both. Previously only the ticker job was stored; the counter coroutine was never cancelled,
+    // leaked on every stop(), and a subsequent start() (job == null again) launched a brand new
+    // leaked counter on top of it with nothing to de-duplicate them.
+    private var jobs: List<kotlinx.coroutines.Job>? = null
 
     fun start(scope: CoroutineScope) {
-        if (job != null) return
-        scope.launch(Dispatchers.Default) { bus.events.collect { eventsThisSecond.incrementAndGet() } }
-        job = scope.launch(Dispatchers.Default) {
+        if (jobs != null) return
+        val counterJob = scope.launch(Dispatchers.Default) { bus.events.collect { eventsThisSecond.incrementAndGet() } }
+        val tickerJob = scope.launch(Dispatchers.Default) {
             while (isActive) {
                 kotlinx.coroutines.delay(1000)
                 val runtime = Runtime.getRuntime()
@@ -40,10 +45,11 @@ class PerformanceMonitorImpl @Inject constructor(
                 )
             }
         }
+        jobs = listOf(counterJob, tickerJob)
     }
 
     fun stop() {
-        job?.cancel()
-        job = null
+        jobs?.forEach { it.cancel() }
+        jobs = null
     }
 }

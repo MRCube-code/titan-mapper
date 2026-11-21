@@ -15,8 +15,8 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <!-- Vibration for haptic feedback in macros. -->
     <uses-permission android:name="android.permission.VIBRATE" />
-    <!-- WorkManager crash recovery. -->
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- SCHEDULE_EXACT_ALARM intentionally NOT declared: nothing in this app uses AlarmManager.
+         WorkManager's own one-time/periodic work (CrashRecoveryWorker) does not need it. -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Post notifications (Android 13+) for the persistent service notification. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -45,6 +45,21 @@
 
         <!-- Services, AccessibilityService, and BootReceiver are declared in :service's manifest.
              Gradle merges them automatically via manifest merger. -->
+
+        <!-- TitanApplication supplies its own WorkManager Configuration (so HiltWorkerFactory can
+             build @HiltWorker classes like CrashRecoveryWorker); the default on-demand
+             initializer must be removed or WorkManager throws "WorkManager is already
+             initialized" the first time anything calls WorkManager.getInstance(). -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup.InitializationProvider"
+                tools:node="remove" />
+        </provider>
 
     </application>
 </manifest>

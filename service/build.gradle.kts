@@ -32,6 +32,7 @@ dependencies {
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
+    ksp(libs.androidx.hilt.compiler) // generates the WorkerFactory binding for @HiltWorker CrashRecoveryWorker
 
     // Elevated-permission backends (Architecture §4.4 / §4.5)
     implementation(libs.shizuku.api)

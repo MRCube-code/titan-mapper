@@ -112,4 +112,8 @@ dependencies {
     implementation(libs.hilt.navigation.compose)
     ksp(libs.hilt.compiler)
     implementation(libs.kotlinx.coroutines.android)
+    // TitanApplication implements Configuration.Provider + injects HiltWorkerFactory so
+    // CrashRecoveryWorker (defined in :service) can actually be instantiated and scheduled.
+    implementation(libs.work.runtime.ktx)
+    implementation(libs.hilt.work)
 }

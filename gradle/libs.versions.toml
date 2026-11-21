@@ -72,6 +72,10 @@ room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "workManager" }
 hilt-work = { module = "androidx.hilt:hilt-work", version = "1.2.0" }
+# Separate from hilt-compiler below (that one is Dagger-Hilt's own compiler; @HiltWorker's
+# WorkerFactory multibinding needs androidx.hilt's own compiler artifact too, or HiltWorkerFactory
+# silently has no factory for any @HiltWorker class at runtime).
+androidx-hilt-compiler = { module = "androidx.hilt:hilt-compiler", version = "1.2.0" }
 
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 hilt-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hilt" }
