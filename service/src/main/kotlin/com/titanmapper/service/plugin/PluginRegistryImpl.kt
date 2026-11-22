@@ -15,6 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -25,6 +26,16 @@ import javax.inject.Singleton
  * tiny, AIDL-free contract so plugin and host can't suffer interface-version skew. Every call
  * into a plugin is wrapped in `runCatching` + a timeout: a misbehaving plugin can only fail its
  * own action resolution, never the host's input pipeline (Architecture §14).
+ *
+ * `ContentResolver.call` is a plain blocking Binder transaction, not a suspend function, so simply
+ * wrapping it in `withTimeoutOrNull { ... }` would NOT actually bound how long it can block: a
+ * cancelled coroutine is only ever noticed at a suspension point, and a thread sitting inside a
+ * synchronous call never reaches one, so a truly hung plugin provider would hold that
+ * Dispatchers.IO thread (shared pool-wide with every other blocking IO call in the app, including
+ * the settings/profile repositories the input pipeline reads from) for as long as the plugin
+ * chooses, not 500ms. [runInterruptible] actually ties coroutine cancellation to interrupting the
+ * underlying thread, which is what gives [CALL_TIMEOUT_MS] a real chance of freeing that thread
+ * instead of only changing what value is eventually returned once the call happens to finish.
  */
 @Singleton
 class PluginRegistryImpl @Inject constructor(
@@ -69,9 +80,11 @@ class PluginRegistryImpl @Inject constructor(
         val authority = authorityFor(pluginPackage) ?: return false
         return withTimeoutOrNull(CALL_TIMEOUT_MS) {
             runCatching {
-                val args = Bundle().apply { putString("actionId", actionId); putString("argument", argument) }
-                context.contentResolver.call(authorityUri(authority), METHOD_INVOKE, null, args)
-                    ?.getBoolean("success", false) ?: false
+                runInterruptible(Dispatchers.IO) {
+                    val args = Bundle().apply { putString("actionId", actionId); putString("argument", argument) }
+                    context.contentResolver.call(authorityUri(authority), METHOD_INVOKE, null, args)
+                        ?.getBoolean("success", false) ?: false
+                }
             }.getOrDefault(false)
         } ?: false
     }
@@ -79,10 +92,12 @@ class PluginRegistryImpl @Inject constructor(
     private suspend fun queryActions(authority: String): List<PluginActionInfo> =
         withTimeoutOrNull(CALL_TIMEOUT_MS) {
             runCatching {
-                val result = context.contentResolver.call(authorityUri(authority), METHOD_LIST_ACTIONS, null, null)
-                val ids = result?.getStringArrayList("ids") ?: return@runCatching emptyList()
-                val labels = result.getStringArrayList("labels") ?: ids
-                ids.indices.map { i -> PluginActionInfo(ids[i], labels.getOrElse(i) { ids[i] }) }
+                runInterruptible(Dispatchers.IO) {
+                    val result = context.contentResolver.call(authorityUri(authority), METHOD_LIST_ACTIONS, null, null)
+                    val ids = result?.getStringArrayList("ids") ?: return@runInterruptible emptyList()
+                    val labels = result.getStringArrayList("labels") ?: ids
+                    ids.indices.map { i -> PluginActionInfo(ids[i], labels.getOrElse(i) { ids[i] }) }
+                }
             }.getOrDefault(emptyList())
         } ?: emptyList()
 
