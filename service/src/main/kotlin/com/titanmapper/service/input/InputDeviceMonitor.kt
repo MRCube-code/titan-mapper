@@ -14,6 +14,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.security.MessageDigest
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -30,10 +31,27 @@ class InputDeviceMonitor @Inject constructor(
 ) {
     private val inputManager = context.getSystemService(Context.INPUT_SERVICE) as InputManager
 
+    /**
+     * Android's deviceId is only valid while the device is attached, so [onInputDeviceRemoved]
+     * can't look anything up about it -- but [DeviceRepository.onDeviceDisconnected] needs the
+     * stable fingerprint id, not the ephemeral deviceId. Recorded at add/change time so it's still
+     * available once the device is actually gone.
+     */
+    private val deviceIdToStableId = ConcurrentHashMap<Int, String>()
+
     private val listener = object : InputManager.InputDeviceListener {
         override fun onInputDeviceAdded(deviceId: Int) = handle(deviceId)
         override fun onInputDeviceChanged(deviceId: Int) = handle(deviceId)
-        override fun onInputDeviceRemoved(deviceId: Int) = Unit // id is now invalid; nothing to look up
+        override fun onInputDeviceRemoved(deviceId: Int) {
+            // Previously a no-op: DeviceRepository.onDeviceDisconnected() was never called from
+            // anywhere, so a device marked "connected" here never went back to "disconnected" on a
+            // normal unplug -- only a process restart (which resets the in-memory connected set)
+            // ever cleared it. The Devices screen and MacroCondition.DeviceIsConnected both read
+            // that same connected set, so both were stuck believing an unplugged device was still
+            // there.
+            val stableId = deviceIdToStableId.remove(deviceId) ?: return
+            deviceRepository.onDeviceDisconnected(stableId)
+        }
     }
 
     /** Main-thread Handler, used explicitly below -- see [start]'s KDoc for why `null` isn't safe here. */
@@ -54,11 +72,17 @@ class InputDeviceMonitor @Inject constructor(
 
     fun stop() {
         inputManager.unregisterInputDeviceListener(listener)
+        // Once unregistered we won't hear about any further unplug, so leaving stale entries
+        // marked "connected" would be exactly the same staleness bug onInputDeviceRemoved above
+        // now fixes -- clearConnected() exists for precisely this moment.
+        deviceIdToStableId.clear()
+        deviceRepository.clearConnected()
     }
 
     private fun handle(deviceId: Int) {
         val device = inputManager.getInputDevice(deviceId) ?: return
         val fingerprint = fingerprintOf(device) ?: return
+        deviceIdToStableId[deviceId] = fingerprint.stableId
         scope.launch { deviceRepository.onDeviceConnected(fingerprint) }
     }
 
