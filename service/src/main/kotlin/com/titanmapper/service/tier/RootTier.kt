@@ -56,6 +56,19 @@ class RootTier @Inject constructor(
     private val scope = CoroutineScope(Dispatchers.IO)
     @Volatile private var granted = false
 
+    /**
+     * Every `su -c cat <node>` child process currently piping evdev records into [streamDevice].
+     * [captureJob]?.cancel() alone is NOT enough to stop these promptly: each stream coroutine
+     * spends almost all of its time blocked in a plain (non-suspending) [DataInputStream.readFully]
+     * call on the process's stdout, which only re-checks coroutine cancellation *after* a read
+     * returns. A quiet device (no key/motion event) can leave that read blocked indefinitely, so a
+     * cancelled-but-still-blocked coroutine -- and the root shell process and evdev-node file
+     * handle underneath it -- would otherwise leak until the device happens to produce another
+     * event. [stop] destroys every tracked process directly, which closes its stdout and unblocks
+     * the pending readFully() immediately with an IOException instead.
+     */
+    private val activeProcesses = java.util.Collections.synchronizedSet(HashSet<Process>())
+
     override val sink = object : OutputDispatchSink {
         override val tier = CaptureTier.ROOT
 
@@ -103,6 +116,11 @@ class RootTier @Inject constructor(
         granted = Shell.getShell().isRoot
         if (!granted) return@withContext false
         captureJob?.cancel()
+        // Same reasoning as stop(): a stale capture coroutine from a previous start() can still be
+        // blocked in readFully() rather than actually gone, so make sure nothing is left running
+        // before this start() spins up a fresh set of streams for (possibly) the same devices.
+        val stale = synchronized(activeProcesses) { ArrayList(activeProcesses) }
+        stale.forEach { it.destroy() }
         captureJob = scope.launch { captureLoop() }
         true
     }
@@ -110,6 +128,11 @@ class RootTier @Inject constructor(
     override fun stop() {
         captureJob?.cancel()
         captureJob = null
+        // See activeProcesses' KDoc: cancelling the Job doesn't unblock a stream coroutine that's
+        // currently sitting in a blocking readFully() call, so destroy the underlying processes
+        // directly -- that closes their stdout and makes the pending read fail immediately.
+        val processes = synchronized(activeProcesses) { ArrayList(activeProcesses) }
+        processes.forEach { it.destroy() }
     }
 
     override fun isHealthy(): Boolean = granted && Shell.getCachedShell()?.isRoot == true
@@ -149,6 +172,7 @@ class RootTier @Inject constructor(
         var process: Process? = null
         try {
             process = ProcessBuilder("su", "-c", "cat '${node.path}'").redirectErrorStream(false).start()
+            activeProcesses += process
             val input = DataInputStream(BufferedInputStream(process.inputStream, EVENT_SIZE * 64))
             val record = ByteArray(EVENT_SIZE)
             var relX = 0f
@@ -178,7 +202,7 @@ class RootTier @Inject constructor(
         } catch (_: Exception) {
             // A single unreadable/disconnected device must not take down capture for the others.
         } finally {
-            process?.destroy()
+            process?.let { activeProcesses -= it; it.destroy() }
             bus.publish(RawInputEvent.DeviceConnectionChanged(fingerprint, System.nanoTime(), CaptureTier.ROOT, connected = false))
         }
     }

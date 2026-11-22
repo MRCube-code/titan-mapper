@@ -129,8 +129,12 @@ class ShizukuTier @Inject constructor(
                 com.titanmapper.core.model.SystemActionType.RECENTS -> KeyEvent.KEYCODE_APP_SWITCH
                 else -> return false // notifications/quick-settings/screenshot/lock have no reliable KeyEvent equivalent via this path
             }
-            injectKey(code, DispatchPhase.DOWN)
-            return injectKey(code, DispatchPhase.UP)
+            // Report success only if BOTH halves actually went through -- previously this reported
+            // whatever the UP injection returned even when the DOWN injection had already failed,
+            // which could claim success for an action that was never really sent.
+            val downOk = injectKey(code, DispatchPhase.DOWN)
+            val upOk = injectKey(code, DispatchPhase.UP)
+            return downOk && upOk
         }
 
         private fun invokeInject(method: Method, binder: android.os.IInterface, event: android.view.InputEvent): Boolean =
