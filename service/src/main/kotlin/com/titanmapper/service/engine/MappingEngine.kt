@@ -63,6 +63,20 @@ class MappingEngine(
     }
 
     /**
+     * True if [key] is referenced by any enabled binding in the active profile -- a single key,
+     * part of a combo, or part of a sequence. A pure read of the @Volatile [index], so it is safe
+     * to call from any thread (e.g. a capture tier's synchronous onKeyEvent callback) without
+     * going through the single consumer coroutine: it never mutates engine state.
+     */
+    fun isKeyBound(key: KeyCode): Boolean {
+        val idx = index
+        if (idx.singleKeys[key]?.isEnabled == true) return true
+        if (idx.combos[key]?.any { it.binding.isEnabled } == true) return true
+        if (idx.sequences.any { key in it.trigger.keys }) return true
+        return false
+    }
+
+    /**
      * Release every held/toggled/repeating action. Call before switching profiles or when the
      * capture tier is demoted/torn down, so no injected key is ever left stuck down.
      */

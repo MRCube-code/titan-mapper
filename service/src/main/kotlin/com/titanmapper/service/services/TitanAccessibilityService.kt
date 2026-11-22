@@ -10,6 +10,7 @@ import com.titanmapper.core.model.CaptureTier
 import com.titanmapper.core.model.DeviceClass
 import com.titanmapper.core.model.DeviceFingerprint
 import com.titanmapper.core.model.KeyAction
+import com.titanmapper.service.api.ServiceController
 import com.titanmapper.service.input.AndroidKeyCodeTranslator
 import com.titanmapper.service.input.InputDeviceMonitor
 import com.titanmapper.service.input.InputEventBus
@@ -23,15 +24,23 @@ import javax.inject.Inject
  * Accessibility tier (Architecture §4.3). [onKeyEvent] with
  * [AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS] is the only no-root/no-ADB path to
  * true system-wide key interception on stock Android — it runs before the foreground app sees
- * the key. Returning true here CONSUMES the key everywhere, which is how this tier can "capture"
- * input at all. It cannot, however, inject KeyEvents into other apps (gesture injection only),
- * and foreground-package tracking comes from window-state accessibility events, not from any
+ * the key. Returning true CONSUMES the key everywhere, which is how this tier "captures" input
+ * at all, but [onKeyEvent] only ever does that for a key [ServiceController.isKeyBound] says an
+ * active, enabled binding actually owns -- every other recognized key (i.e. ordinary typing) is
+ * returned false and reaches the foreground app untouched, same as if this service didn't exist.
+ * It cannot, however, inject KeyEvents into other apps (gesture injection only), and
+ * foreground-package tracking comes from window-state accessibility events, not from any
  * reserved API.
  */
 @AndroidEntryPoint
 class TitanAccessibilityService : AccessibilityService() {
 
     @Inject lateinit var bus: InputEventBus
+    @Inject lateinit var controller: ServiceController
+
+    /** Android keyCodes whose ACTION_DOWN we consumed; onKeyEvent runs on the main thread only,
+     *  so no extra synchronization is needed to touch this from there. */
+    private val consumedKeys = HashSet<Int>()
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -40,14 +49,35 @@ class TitanAccessibilityService : AccessibilityService() {
                 AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
             eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
         }
+        consumedKeys.clear() // a freshly (re)connected service never already owns anything
         instance = this
         _connected.value = true
     }
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
-        if (event.repeatCount > 0 && event.action == KeyEvent.ACTION_DOWN) return isOwned(event.keyCode)
         val keyCode = AndroidKeyCodeTranslator.fromAndroid(event.keyCode)
         if (keyCode == com.titanmapper.core.model.KeyCode.UNKNOWN) return false
+
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            if (event.repeatCount > 0) {
+                // OS auto-repeat: keep consuming only while we're already holding this key down.
+                return event.keyCode in consumedKeys
+            }
+            // This tier's whole value proposition is swallowing a key system-wide, but only a key
+            // an active, enabled binding actually owns -- otherwise every recognized keystroke
+            // (basically all normal typing) would be eaten the moment this tier is turned on,
+            // even in apps that have nothing to do with Titan Mapper.
+            if (!controller.isKeyBound(keyCode)) return false
+            consumedKeys += event.keyCode
+        } else {
+            // ACTION_UP: consume iff we consumed the matching DOWN. Checking isKeyBound() again
+            // here would be wrong -- the binding can change (profile swap, toggle off) between a
+            // key's down and up, and an unmatched up/down pair reaching the foreground app (or a
+            // down we consumed with its up let through) is its own "stuck key" class of bug.
+            if (event.keyCode !in consumedKeys) return false
+            consumedKeys -= event.keyCode
+        }
+
         bus.publish(
             RawInputEvent.Key(
                 deviceFingerprint = fingerprintFor(event.deviceId),
@@ -57,7 +87,7 @@ class TitanAccessibilityService : AccessibilityService() {
                 action = if (event.action == KeyEvent.ACTION_DOWN) KeyAction.DOWN else KeyAction.UP
             )
         )
-        return true // consume: this tier's whole value proposition is swallowing the key system-wide
+        return true
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -91,8 +121,6 @@ class TitanAccessibilityService : AccessibilityService() {
     }
 
     fun dispatchGlobalAction(action: Int): Boolean = performGlobalAction(action)
-
-    private fun isOwned(androidKeyCode: Int) = AndroidKeyCodeTranslator.fromAndroid(androidKeyCode) != com.titanmapper.core.model.KeyCode.UNKNOWN
 
     private fun fingerprintFor(deviceId: Int): DeviceFingerprint {
         val device = android.view.InputDevice.getDevice(deviceId)

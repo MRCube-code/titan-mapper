@@ -83,7 +83,10 @@ class PipelineCoordinator @Inject constructor(
     // start()/stop() while lifecycleMutex is held and the actor is not yet running / has been
     // joined. Never read or written from healthCheckJob/idleCheckJob directly. ---
     private var activeBackend: TierBackend? = null
-    private var engine: MappingEngine? = null
+    // @Volatile: mutated only by the actor (see class doc), but isKeyBound() below is read from
+    // whatever thread a capture tier's synchronous callback runs on, so the reference itself
+    // needs a safe publication guarantee even though nothing outside the actor ever writes it.
+    @Volatile private var engine: MappingEngine? = null
     private val pointerTransform = PointerTransform(com.titanmapper.core.model.SensitivityPreset.DEFAULT)
     private val pointerDelta = FloatArray(2)
     private var lastEventAtNanos = System.nanoTime()
@@ -286,6 +289,8 @@ class PipelineCoordinator @Inject constructor(
         eventLog.log(LogLevel.INFO, "Pipeline", "Started on ${tier.name} tier")
         return true
     }
+
+    override fun isKeyBound(key: com.titanmapper.core.model.KeyCode): Boolean = engine?.isKeyBound(key) ?: false
 
     private fun backendFor(tier: PermissionTier): TierBackend = when (tier) {
         PermissionTier.STANDARD -> standardTier

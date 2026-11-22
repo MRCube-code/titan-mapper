@@ -3,6 +3,7 @@ package com.titanmapper.service.api
 import android.view.KeyEvent
 import android.view.MotionEvent
 import com.titanmapper.core.model.CapabilitySnapshot
+import com.titanmapper.core.model.KeyCode
 import com.titanmapper.core.model.MacroDefinition
 import com.titanmapper.core.model.MacroStep
 import com.titanmapper.core.model.PermissionTier
@@ -35,6 +36,14 @@ interface ServiceController {
     /** Starts the foreground service with the tier from settings. Safe to call repeatedly. */
     fun start()
     fun stop()
+
+    /**
+     * True if [key] is currently claimed by an enabled binding in the active profile. A capture
+     * tier that can swallow input system-wide (Accessibility's onKeyEvent) MUST check this before
+     * consuming a key, so normal typing/navigation in other apps isn't eaten just because that
+     * tier is turned on. False (never swallow) when the pipeline isn't running at all.
+     */
+    fun isKeyBound(key: KeyCode): Boolean
 }
 
 /** Which tiers are usable right now (root granted, Shizuku bound, accessibility enabled). */
