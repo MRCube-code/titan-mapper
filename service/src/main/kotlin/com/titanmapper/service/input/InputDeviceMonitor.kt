@@ -2,6 +2,8 @@ package com.titanmapper.service.input
 
 import android.content.Context
 import android.hardware.input.InputManager
+import android.os.Handler
+import android.os.Looper
 import android.view.InputDevice
 import com.titanmapper.core.common.ApplicationScope
 import com.titanmapper.core.common.DataResult
@@ -34,8 +36,19 @@ class InputDeviceMonitor @Inject constructor(
         override fun onInputDeviceRemoved(deviceId: Int) = Unit // id is now invalid; nothing to look up
     }
 
+    /** Main-thread Handler, used explicitly below -- see [start]'s KDoc for why `null` isn't safe here. */
+    private val mainHandler = Handler(Looper.getMainLooper())
+
     fun start() {
-        inputManager.registerInputDeviceListener(listener, null)
+        // A null Handler here makes InputManager fall back to Looper.myLooper() on whichever
+        // thread calls this -- and registerInputDeviceListener/InputDeviceListenerDelegate throws
+        // "Can't create handler inside thread ... that has not called Looper.prepare()" the moment
+        // that thread has no Looper. This is called from StandardTier.start(), reached through
+        // PipelineCoordinator's actor coroutine on the ApplicationScope (Dispatchers.Default) pool
+        // -- a plain worker thread with no Looper -- so a null Handler would crash every single
+        // time the Standard tier (the universal fallback every other tier downgrades to) starts.
+        // Passing an explicit main-thread Handler makes this safe regardless of the caller's thread.
+        inputManager.registerInputDeviceListener(listener, mainHandler)
         inputManager.inputDeviceIds.forEach(::handle)
     }
 
