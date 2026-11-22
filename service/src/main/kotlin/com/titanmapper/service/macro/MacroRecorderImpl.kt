@@ -8,6 +8,7 @@ import com.titanmapper.service.api.MacroRecorder
 import com.titanmapper.service.api.RecorderState
 import com.titanmapper.service.input.InputEventBus
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -23,6 +25,13 @@ import javax.inject.Singleton
  * [InputEventBus] the engine consumes, so it sees exactly what the user's devices produced.
  * Near-identical delays (within [JITTER_TOLERANCE_MS]) are collapsed and rounded to the nearest
  * [DELAY_GRANULARITY_MS] so a human recording doesn't produce dozens of near-duplicate Delay steps.
+ *
+ * [start] is a plain, non-suspend call (interface contract), so it can't take [mutex] itself the
+ * way [stop] and [onEvent] do; a bare `if (job != null) return` null-check there would race
+ * [stop]'s mutex-guarded `job = null`, letting two overlapping collectors mutate the shared [steps]
+ * list at once. [job] is therefore an [AtomicReference] claimed with a single `compareAndSet`, and
+ * the actual reset of [steps]/[lastEventNanos] happens inside the (lazily started) collector
+ * coroutine itself, under the same [mutex] [onEvent] and [stop] already use.
  */
 @Singleton
 class MacroRecorderImpl @Inject constructor(
@@ -33,25 +42,32 @@ class MacroRecorderImpl @Inject constructor(
     override val state: StateFlow<RecorderState> get() = _state
 
     private val mutex = Mutex()
-    private var job: Job? = null
+    private val job = AtomicReference<Job?>(null)
     private val steps = ArrayList<MacroStep>()
     private var lastEventNanos: Long = 0
 
     override fun start() {
-        if (job != null) return
-        steps.clear()
-        lastEventNanos = 0
-        _state.value = RecorderState(recording = true, capturedEvents = 0)
-        job = CoroutineScope(Dispatchers.Default).launch {
+        val newJob = CoroutineScope(Dispatchers.Default).launch(start = CoroutineStart.LAZY) {
+            mutex.withLock {
+                steps.clear()
+                lastEventNanos = 0
+            }
             bus.events.collect { event -> onEvent(event) }
         }
+        if (!job.compareAndSet(null, newJob)) {
+            newJob.cancel() // already recording; ignore the duplicate start() call
+            return
+        }
+        _state.value = RecorderState(recording = true, capturedEvents = 0)
+        newJob.start()
     }
 
-    override suspend fun stop(): List<MacroStep> = mutex.withLock {
-        job?.cancel()
-        job = null
-        _state.value = RecorderState(recording = false, capturedEvents = steps.size)
-        steps.toList()
+    override suspend fun stop(): List<MacroStep> {
+        job.getAndSet(null)?.cancel()
+        return mutex.withLock {
+            _state.value = RecorderState(recording = false, capturedEvents = steps.size)
+            steps.toList()
+        }
     }
 
     private suspend fun onEvent(event: RawInputEvent) {

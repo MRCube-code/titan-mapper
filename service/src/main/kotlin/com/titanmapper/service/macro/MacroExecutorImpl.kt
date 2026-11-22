@@ -13,6 +13,7 @@ import com.titanmapper.service.engine.DispatchPhase
 import com.titanmapper.service.engine.OutputDispatchSink
 import com.titanmapper.service.pipeline.ForegroundAppTracker
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -23,6 +24,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -35,6 +37,14 @@ import javax.inject.Singleton
  * Toggle state for [MacroCondition.ToggleIsActive] is read from a snapshot the
  * [com.titanmapper.service.pipeline.PipelineCoordinator] publishes; this class never touches
  * MappingEngine internals directly, keeping the two testable in isolation.
+ *
+ * [run] can be called from the UI thread (a tap on "run macro") while [jobs] entries are removed
+ * from whatever thread [scope] (Dispatchers.Default, multiple worker threads) happens to run a
+ * finishing macro's `finally` block on, so [jobs] has to be safe for concurrent, unsynchronized
+ * access from both sides -- a plain `HashMap` is not. The "don't stack on yourself" check is also
+ * made atomic (via [ConcurrentHashMap.putIfAbsent] against a not-yet-started, [CoroutineStart.LAZY]
+ * job) so two near-simultaneous [run] calls for the same macro id can't both win the check and end
+ * up with two coroutines executing the same macro while only one is tracked/cancelable.
  */
 @Singleton
 class MacroExecutorImpl @Inject constructor(
@@ -49,16 +59,20 @@ class MacroExecutorImpl @Inject constructor(
     var activeSink: OutputDispatchSink? = null
 
     private val semaphore = Semaphore(MAX_CONCURRENT)
-    private val jobs = HashMap<String, Job>()
+    private val jobs = ConcurrentHashMap<String, Job>()
 
     private val _running = MutableStateFlow<Set<String>>(emptySet())
     override val running: StateFlow<Set<String>> get() = _running
 
     override fun run(macro: MacroDefinition) {
-        if (jobs.containsKey(macro.id)) return // already running; macros don't stack on themselves
-        val job = scope.launch {
+        // Launched LAZILY so nothing actually executes until we know this call won the race to
+        // claim macro.id -- otherwise two near-simultaneous run() calls could both pass a plain
+        // containsKey() check before either one records its Job, leaving two coroutines running
+        // the same macro while jobs[macro.id] only ever holds (and can only ever cancel) one of them.
+        val job = scope.launch(start = CoroutineStart.LAZY) {
             if (!semaphore.tryAcquire()) {
                 eventLog.log(LogLevel.WARN, "Macro", "\"${macro.name}\" not started: too many macros already running")
+                jobs.remove(macro.id)
                 return@launch
             }
             _running.update { it + macro.id }
@@ -72,7 +86,11 @@ class MacroExecutorImpl @Inject constructor(
                 jobs.remove(macro.id)
             }
         }
-        jobs[macro.id] = job
+        if (jobs.putIfAbsent(macro.id, job) != null) {
+            job.cancel() // already running; macros don't stack on themselves -- another call won the race
+            return
+        }
+        job.start()
     }
 
     override fun cancel(macroId: String) {
