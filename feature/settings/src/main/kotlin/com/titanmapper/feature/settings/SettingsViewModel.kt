@@ -3,6 +3,7 @@ package com.titanmapper.feature.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.titanmapper.core.common.DataResult
+import com.titanmapper.core.common.InstalledVersionCode
 import com.titanmapper.core.data.backup.BackupManager
 import com.titanmapper.core.data.settings.SettingsRepository
 import com.titanmapper.core.model.AppSettings
@@ -53,7 +54,8 @@ class SettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val pluginRegistry: PluginRegistry,
     private val backupManager: BackupManager,
-    private val updateChecker: UpdateChecker
+    private val updateChecker: UpdateChecker,
+    @InstalledVersionCode private val installedVersionCode: Int
 ) : ViewModel() {
 
     private val backupBusy = MutableStateFlow(false)
@@ -107,7 +109,7 @@ class SettingsViewModel @Inject constructor(
             }
             SettingsUiEvent.CheckForUpdates -> viewModelScope.launch {
                 val url = uiState.value.settings.updateChannelUrl
-                when (val result = updateChecker.check(url, installedVersionCode = BuildConfigVersion.CODE)) {
+                when (val result = updateChecker.check(url, installedVersionCode = installedVersionCode)) {
                     is DataResult.Success -> message.value = result.value?.let {
                         "Update available: ${it.versionName}\n${it.notes}"
                     } ?: "You're up to date"
@@ -123,9 +125,4 @@ class SettingsViewModel @Inject constructor(
     private fun update(transform: (AppSettings) -> AppSettings) {
         viewModelScope.launch { settingsRepository.update(transform) }
     }
-}
-
-/** Avoids a direct :app BuildConfig dependency from a feature module; :app supplies the real value via DI if needed. */
-internal object BuildConfigVersion {
-    const val CODE = 1
 }

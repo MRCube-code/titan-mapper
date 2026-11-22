@@ -8,6 +8,7 @@ import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
 import com.titanmapper.core.common.ApplicationScope
 import com.titanmapper.core.common.DefaultDispatcher
+import com.titanmapper.core.common.InstalledVersionCode
 import com.titanmapper.core.common.IoDispatcher
 import com.titanmapper.core.data.TitanJson
 import com.titanmapper.core.data.repository.DeviceRepository
@@ -71,6 +72,23 @@ object DataProvidesModule {
     @Provides @Singleton
     fun settingsStore(@ApplicationContext context: Context): DataStore<Preferences> =
         PreferenceDataStoreFactory.create { context.preferencesDataStoreFile("titan_settings") }
+
+    /**
+     * Read once from PackageManager rather than hardcoded -- see [InstalledVersionCode]'s KDoc.
+     * Falls back to 0 (never "newer" than anything) if the package somehow can't look itself up,
+     * which fails the update check safely closed instead of claiming a bogus update is available.
+     */
+    @Provides @Singleton @InstalledVersionCode
+    fun installedVersionCode(@ApplicationContext context: Context): Int = try {
+        val info = context.packageManager.getPackageInfo(context.packageName, 0)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            info.longVersionCode.toInt()
+        } else {
+            @Suppress("DEPRECATION") info.versionCode
+        }
+    } catch (e: Exception) {
+        0
+    }
 }
 
 @Module
