@@ -91,6 +91,8 @@ class PipelineCoordinator @Inject constructor(
     private val pointerDelta = FloatArray(2)
     private var lastEventAtNanos = System.nanoTime()
     private var currentProfile: MappingProfile? = null
+    /** Last [InputEventBus.droppedCount] seen by [handleEvent]; actor-confined, like everything else here. */
+    private var lastKnownDroppedCount = 0L
 
     /** Pure signal flows: producers never touch pipeline state, they only tick the actor. */
     private val healthTicks = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
@@ -202,6 +204,21 @@ class PipelineCoordinator @Inject constructor(
             .distinctUntilChanged { a, b -> a?.id == b?.id }
 
     private fun handleEvent(event: RawInputEvent) {
+        bus.noteConsumed()
+        val droppedNow = bus.droppedCount
+        if (droppedNow != lastKnownDroppedCount) {
+            // DROP_OLDEST just silently evicted one or more events between the last event we saw
+            // and this one. We have no way to know which keys/buttons they belonged to -- it could
+            // easily have been the UP that was supposed to release something the engine still
+            // thinks is held -- so the only safe response is to release everything now, rather than
+            // risk a key or mouse button stuck "down" forever.
+            eventLog.log(
+                LogLevel.WARN, "Pipeline",
+                "Recovered from ${droppedNow - lastKnownDroppedCount} dropped input event(s): released all active outputs"
+            )
+            engine?.releaseAll()
+            lastKnownDroppedCount = droppedNow
+        }
         lastEventAtNanos = System.nanoTime()
         val backend = activeBackend ?: return
         val currentEngine = engine ?: return
