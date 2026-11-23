@@ -20,6 +20,9 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Post notifications (Android 13+) for the persistent service notification. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Lets the Permissions management screen prompt for battery-optimization exemption, so the
+         foreground input service survives OEM background-kill policies ("Run in Background"). -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <application
         android:name=".TitanApplication"
@@ -45,6 +48,16 @@
 
         <!-- Services, AccessibilityService, and BootReceiver are declared in :service's manifest.
              Gradle merges them automatically via manifest merger. -->
+
+        <activity
+            android:name=".PermissionsManagementActivity"
+            android:exported="false"
+            android:theme="@style/Theme.TitanMapper" />
+
+        <activity
+            android:name=".ShizukuSetupActivity"
+            android:exported="false"
+            android:theme="@style/Theme.TitanMapper" />
 
         <!-- TitanApplication supplies its own WorkManager Configuration (so HiltWorkerFactory can
              build @HiltWorker classes like CrashRecoveryWorker); the default on-demand

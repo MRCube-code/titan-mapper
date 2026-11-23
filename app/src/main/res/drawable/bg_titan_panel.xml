@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Main indigo panel body, behind the "Required Permission" / "Recommended Settings" groups. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/titan_panel_indigo" />
+    <corners android:radius="4dp" />
+</shape>

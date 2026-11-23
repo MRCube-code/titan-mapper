@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/titan_bar_light">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="20dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="20dp"
+        android:paddingBottom="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:text="@string/shizuku_setup_title"
+            android:textColor="@color/titan_text_on_light"
+            android:textStyle="bold|italic"
+            android:textSize="26sp" />
+
+        <ImageButton
+            android:id="@+id/closeButton"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:background="@drawable/bg_titan_circle_dark"
+            android:src="@drawable/ic_titan_close"
+            android:scaleType="center"
+            android:contentDescription="@string/close"
+            android:padding="12dp" />
+    </RelativeLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/titan_bar_light_divider" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:background="@color/titan_panel_indigo"
+        android:layout_marginStart="18dp"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="16dp">
+
+        <include layout="@layout/row_titan_permission" android:id="@+id/stepServiceInclude" />
+        <include layout="@layout/row_titan_permission" android:id="@+id/stepPermissionInclude" />
+        <include layout="@layout/row_titan_permission" android:id="@+id/stepActivateInclude" />
+
+        <TextView
+            android:id="@+id/tutorialLink"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:background="@drawable/bg_titan_row"
+            android:gravity="end|center_vertical"
+            android:padding="16dp"
+            android:text="@string/shizuku_tutorial_link"
+            android:textColor="@color/titan_text_white"
+            android:textSize="15sp" />
+    </LinearLayout>
+</LinearLayout>

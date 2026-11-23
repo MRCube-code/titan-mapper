@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="2dp"
+    android:background="@drawable/bg_titan_row"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
+    android:paddingTop="16dp"
+    android:paddingBottom="16dp">
+
+    <TextView
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="@string/permissions_power_saver_label"
+        android:textColor="@color/titan_text_white"
+        android:textSize="16sp" />
+
+    <Button
+        android:id="@+id/powerSaverButton"
+        style="?android:attr/borderlessButtonStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_titan_button"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:text="@string/permissions_turn_off_button"
+        android:textColor="@color/titan_text_white"
+        android:textSize="13sp" />
+</LinearLayout>

@@ -1,4 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Titan Mapper</string>
+
+    <!-- Permissions management (XML/ViewBinding screen) -->
+    <string name="permissions_management_title">Permissions management</string>
+    <string name="permissions_required_header">Required Permission</string>
+    <string name="permissions_recommended_header">Recommended Settings</string>
+    <string name="permissions_overlay_label">Overlay Window Permission</string>
+    <string name="permissions_background_label">Run in Background Permission</string>
+    <string name="permissions_power_saver_label">Turn Off Power Saver Mode</string>
+    <string name="permissions_grant_button">GRANT</string>
+    <string name="permissions_turn_off_button">TURN OFF</string>
+    <string name="help_question_mark">?</string>
+    <string name="close">Close</string>
+
+    <!-- Shizuku setup (XML/ViewBinding screen) -->
+    <string name="shizuku_setup_title">Shizuku</string>
+    <string name="shizuku_step_service">1. Start Shizuku service</string>
+    <string name="shizuku_step_permission">2. Grant permission to use Shizuku</string>
+    <string name="shizuku_step_activate">3. Tap to Activate</string>
+    <string name="shizuku_tutorial_link">Click me to watch tutorial</string>
 </resources>

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Dark indigo/lavender palette for the XML/ViewBinding "system" screens (Permissions
+        management, Shizuku setup, and anything else matching the reference screenshots). This is
+        intentionally a separate palette from core/ui's Compose TitanTheme: these screens are
+        modal, OS-settings-style management dialogs, not part of the main Compose navigation, so
+        they keep their own fixed dark look rather than following the user's light/dark/dynamic
+        theme choice -- matching how the reference screens never changed look with system theme.
+    -->
+    <color name="titan_bar_light">#E4E2FB</color>
+    <color name="titan_bar_light_divider">#C9C6EE</color>
+    <color name="titan_text_on_light">#17131F</color>
+
+    <color name="titan_panel_indigo">#5457B8</color>
+    <color name="titan_row_indigo">#6E72E6</color>
+    <color name="titan_chip_indigo">#4B4EA8</color>
+    <color name="titan_button_indigo">#3C3F8E</color>
+
+    <color name="titan_accent_orange">#F2A96B</color>
+    <color name="titan_check_green">#3ECF6E</color>
+    <color name="titan_circle_dark">#2C2A45</color>
+
+    <color name="titan_text_white">#FFFFFF</color>
+    <color name="titan_text_white_70">#B3FFFFFF</color>
+</resources>

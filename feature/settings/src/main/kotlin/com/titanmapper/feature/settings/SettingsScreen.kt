@@ -117,12 +117,40 @@ private fun SettingsContent(
     onRestoreBackup: () -> Unit
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(TitanSpacing.l), verticalArrangement = Arrangement.spacedBy(TitanSpacing.m)) {
+        item { PermissionsSection() }
         item { ThemeSection(state, onEvent) }
         item { BehaviorSection(state, onEvent) }
         item { BackupSection(state, onCreateBackup, onRestoreBackup) }
         item { PluginSection(state, onEvent) }
         item { UpdateSection(state, onEvent) }
         item { AboutSection() }
+    }
+}
+
+/**
+ * Entry points into the two XML/ViewBinding "system" screens that match the reference
+ * screenshots exactly (see [com.titanmapper.app.PermissionsManagementActivity]/
+ * [com.titanmapper.app.ShizukuSetupActivity] in :app, which this module can't depend on directly
+ * since the dependency runs the other way -- so these are launched by fully-qualified class name
+ * instead of a compile-time reference).
+ */
+@Composable
+private fun PermissionsSection() {
+    val context = LocalContext.current
+    TitanCard {
+        SectionHeader("Permissions & Shizuku")
+        Text(
+            "Check and grant the overlay, background-run, and Shizuku permissions this app needs.",
+            style = MaterialTheme.typography.bodySmall
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(TitanSpacing.s)) {
+            Button(onClick = {
+                context.startActivity(android.content.Intent().setClassName(context, "com.titanmapper.app.PermissionsManagementActivity"))
+            }) { Text("Permissions") }
+            TextButton(onClick = {
+                context.startActivity(android.content.Intent().setClassName(context, "com.titanmapper.app.ShizukuSetupActivity"))
+            }) { Text("Shizuku setup") }
+        }
     }
 }
 
@@ -231,4 +259,3 @@ private fun LabeledSwitch(label: String, checked: Boolean, onCheckedChange: (Boo
         Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
-

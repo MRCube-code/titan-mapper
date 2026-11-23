@@ -64,7 +64,14 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        // For the dark-indigo "system" screens (Permissions management, Shizuku setup) that match
+        // the GG-Mouse-Pro-3-style reference screenshots exactly -- built as plain XML/ViewBinding
+        // Activities rather than Compose, per the redesign request. Compose stays the primary UI
+        // for everything already built; this is additive, not a rip-and-replace.
+        viewBinding = true
+    }
 
     packaging {
         resources {
@@ -116,4 +123,8 @@ dependencies {
     // CrashRecoveryWorker (defined in :service) can actually be instantiated and scheduled.
     implementation(libs.work.runtime.ktx)
     implementation(libs.hilt.work)
+    // :service declares this as `implementation`, not `api`, so it isn't on this module's
+    // compile classpath transitively -- needed directly here for ShizukuSetupActivity's real
+    // Shizuku.pingBinder()/checkSelfPermission()/requestPermission() calls.
+    implementation(libs.shizuku.api)
 }

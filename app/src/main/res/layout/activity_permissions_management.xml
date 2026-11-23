@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/titan_bar_light">
+
+    <!-- Title bar -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="20dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="20dp"
+        android:paddingBottom="16dp">
+
+        <TextView
+            android:id="@+id/titleText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:text="@string/permissions_management_title"
+            android:textColor="@color/titan_text_on_light"
+            android:textStyle="bold|italic"
+            android:textSize="26sp" />
+
+        <ImageButton
+            android:id="@+id/closeButton"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:background="@drawable/bg_titan_circle_dark"
+            android:src="@drawable/ic_titan_close"
+            android:scaleType="center"
+            android:contentDescription="@string/close"
+            android:padding="12dp" />
+    </RelativeLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/titan_bar_light_divider" />
+
+    <!-- Indigo panel body -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:background="@color/titan_panel_indigo"
+        android:layout_marginStart="18dp"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="16dp">
+
+        <!-- Required Permission -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_titan_chip"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:text="@string/permissions_required_header"
+            android:textColor="@color/titan_accent_orange"
+            android:textSize="16sp" />
+
+        <include layout="@layout/row_titan_permission" android:id="@+id/rowOverlayInclude" />
+        <include layout="@layout/row_titan_permission" android:id="@+id/rowBackgroundInclude" />
+
+        <Space android:layout_width="match_parent" android:layout_height="12dp" />
+
+        <!-- Recommended Settings -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_titan_chip"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:text="@string/permissions_recommended_header"
+            android:textColor="@color/titan_accent_orange"
+            android:textSize="16sp" />
+
+        <include layout="@layout/row_titan_power_saver" android:id="@+id/rowPowerSaverInclude" />
+
+    </LinearLayout>
+</LinearLayout>
