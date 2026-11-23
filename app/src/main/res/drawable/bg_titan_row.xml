@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- A single permission/step row inside the panel -- lighter indigo than the panel background. -->
+<!-- A single permission/step row inside the panel; lighter indigo than the panel background. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
     <solid android:color="@color/titan_row_indigo" />
     <corners android:radius="4dp" />

@@ -6,7 +6,7 @@
         intentionally a separate palette from core/ui's Compose TitanTheme: these screens are
         modal, OS-settings-style management dialogs, not part of the main Compose navigation, so
         they keep their own fixed dark look rather than following the user's light/dark/dynamic
-        theme choice -- matching how the reference screens never changed look with system theme.
+        theme choice, matching how the reference screens never changed look with system theme.
     -->
     <color name="titan_bar_light">#E4E2FB</color>
     <color name="titan_bar_light_divider">#C9C6EE</color>

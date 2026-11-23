@@ -163,7 +163,7 @@
         </LinearLayout>
     </ScrollView>
 
-    <!-- Bottom nav: Start Game / Settings only (no Account/Lottery -- nothing real behind them). -->
+    <!-- Bottom nav: Start Game / Settings only (no Account/Lottery; nothing real behind them). -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
