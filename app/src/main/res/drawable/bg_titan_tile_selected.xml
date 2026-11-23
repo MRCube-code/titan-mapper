@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Same as bg_titan_tile but with a border, for the currently-selected small game tile. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/titan_tile_indigo" />
+    <stroke android:width="2dp" android:color="@color/titan_text_white" />
+    <corners android:radius="6dp" />
+</shape>

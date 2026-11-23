@@ -20,4 +20,14 @@
     <string name="shizuku_step_permission">2. Grant permission to use Shizuku</string>
     <string name="shizuku_step_activate">3. Tap to Activate</string>
     <string name="shizuku_tutorial_link">Click me to watch tutorial</string>
+
+    <!-- Games (XML/ViewBinding screen) -->
+    <string name="games_title">Games</string>
+    <string name="games_connected">Connected</string>
+    <string name="games_disconnected">Disconnected</string>
+    <string name="games_add_game">+ Add Game</string>
+    <string name="games_start_game">Start Game</string>
+    <string name="games_nav_start_game">Start Game</string>
+    <string name="games_nav_settings">Settings</string>
+    <string name="games_no_launchable_apps">No installed apps found to add.</string>
 </resources>

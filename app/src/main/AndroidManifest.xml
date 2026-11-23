@@ -59,6 +59,11 @@
             android:exported="false"
             android:theme="@style/Theme.TitanMapper" />
 
+        <activity
+            android:name=".GamesActivity"
+            android:exported="false"
+            android:theme="@style/Theme.TitanMapper" />
+
         <!-- TitanApplication supplies its own WorkManager Configuration (so HiltWorkerFactory can
              build @HiltWorker classes like CrashRecoveryWorker); the default on-demand
              initializer must be removed or WorkManager throws "WorkManager is already

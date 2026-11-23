@@ -117,6 +117,7 @@ private fun SettingsContent(
     onRestoreBackup: () -> Unit
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(TitanSpacing.l), verticalArrangement = Arrangement.spacedBy(TitanSpacing.m)) {
+        item { GamesSection() }
         item { PermissionsSection() }
         item { ThemeSection(state, onEvent) }
         item { BehaviorSection(state, onEvent) }
@@ -124,6 +125,25 @@ private fun SettingsContent(
         item { PluginSection(state, onEvent) }
         item { UpdateSection(state, onEvent) }
         item { AboutSection() }
+    }
+}
+
+/**
+ * Entry point into [com.titanmapper.app.GamesActivity] -- see [PermissionsSection] below for why
+ * this launches by fully-qualified class name rather than a compile-time reference.
+ */
+@Composable
+private fun GamesSection() {
+    val context = LocalContext.current
+    TitanCard {
+        SectionHeader("Games")
+        Text(
+            "Pick an app, launch it, and its mapping profile activates automatically.",
+            style = MaterialTheme.typography.bodySmall
+        )
+        Button(onClick = {
+            context.startActivity(android.content.Intent().setClassName(context, "com.titanmapper.app.GamesActivity"))
+        }) { Text("Open Games") }
     }
 }
 
