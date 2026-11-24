@@ -41,6 +41,7 @@ class SettingsRepositoryImpl @Inject constructor(
         val latency = booleanPreferencesKey("latency_monitor")
         val idleMinutes = intPreferencesKey("idle_teardown_minutes")
         val boot = booleanPreferencesKey("start_on_boot")
+        val overlayMenu = booleanPreferencesKey("show_overlay_menu")
         val updateUrl = stringPreferencesKey("update_url")
     }
 
@@ -62,6 +63,7 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[Keys.latency] = next.latencyMonitorEnabled
             prefs[Keys.idleMinutes] = next.idleTeardownMinutes
             prefs[Keys.boot] = next.startServiceOnBoot
+            prefs[Keys.overlayMenu] = next.showOverlayMenu
             prefs[Keys.updateUrl] = next.updateChannelUrl
         }
     }
@@ -86,6 +88,7 @@ class SettingsRepositoryImpl @Inject constructor(
             latencyMonitorEnabled = this[Keys.latency] ?: d.latencyMonitorEnabled,
             idleTeardownMinutes = this[Keys.idleMinutes] ?: d.idleTeardownMinutes,
             startServiceOnBoot = this[Keys.boot] ?: d.startServiceOnBoot,
+            showOverlayMenu = this[Keys.overlayMenu] ?: d.showOverlayMenu,
             updateChannelUrl = this[Keys.updateUrl] ?: d.updateChannelUrl
         )
     }

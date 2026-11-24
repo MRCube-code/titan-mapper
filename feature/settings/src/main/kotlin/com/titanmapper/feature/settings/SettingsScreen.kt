@@ -118,7 +118,7 @@ private fun SettingsContent(
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(TitanSpacing.l), verticalArrangement = Arrangement.spacedBy(TitanSpacing.m)) {
         item { GamesSection() }
-        item { PermissionsSection() }
+        item { PermissionsSection(state, onEvent) }
         item { ThemeSection(state, onEvent) }
         item { BehaviorSection(state, onEvent) }
         item { BackupSection(state, onCreateBackup, onRestoreBackup) }
@@ -155,7 +155,7 @@ private fun GamesSection() {
  * instead of a compile-time reference).
  */
 @Composable
-private fun PermissionsSection() {
+private fun PermissionsSection(state: SettingsUiState, onEvent: (SettingsUiEvent) -> Unit) {
     val context = LocalContext.current
     TitanCard {
         SectionHeader("Permissions & Shizuku")
@@ -170,6 +170,9 @@ private fun PermissionsSection() {
             TextButton(onClick = {
                 context.startActivity(android.content.Intent().setClassName(context, "com.titanmapper.app.ShizukuSetupActivity"))
             }) { Text("Shizuku setup") }
+        }
+        LabeledSwitch("Show in-game overlay menu (needs the overlay permission above)", state.settings.showOverlayMenu) {
+            onEvent(SettingsUiEvent.SetShowOverlayMenu(it))
         }
     }
 }

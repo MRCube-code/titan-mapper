@@ -20,6 +20,9 @@ data class AppSettings(
     val latencyMonitorEnabled: Boolean = false,
     val idleTeardownMinutes: Int = 10,
     val startServiceOnBoot: Boolean = false,
+    /** Shows the real floating radial keymap overlay (OverlayMenuManager, :service) while the
+     *  input service is running. Still gated at runtime by Settings.canDrawOverlays(). */
+    val showOverlayMenu: Boolean = false,
     val updateChannelUrl: String = ""
 ) {
     companion object {

@@ -4,6 +4,7 @@ import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSiz
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -57,7 +58,7 @@ private enum class TopLevelRoute(
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
-fun TitanNavHost() {
+fun TitanNavHost(startRoute: String? = null, startRouteNonce: Int = 0) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -73,6 +74,14 @@ fun TitanNavHost() {
             launchSingleTop = true
             restoreState = true
         }
+    }
+
+    // Honors a start route requested by another entry point (currently only the floating overlay
+    // menu's Home/Settings/hex buttons, see MainActivity.EXTRA_START_ROUTE); keyed on the nonce
+    // (not just the route string) so tapping the same hex button twice in a row still re-navigates
+    // even though the route string didn't change.
+    LaunchedEffect(startRouteNonce) {
+        startRoute?.let { navigateTo(it) }
     }
 
     if (useRail) {

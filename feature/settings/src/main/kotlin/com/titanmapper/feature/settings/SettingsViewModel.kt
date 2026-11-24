@@ -40,6 +40,7 @@ sealed interface SettingsUiEvent {
     data class SetLogCapacity(val capacity: Int) : SettingsUiEvent
     data class SetIdleTeardown(val minutes: Int) : SettingsUiEvent
     data class SetStartOnBoot(val enabled: Boolean) : SettingsUiEvent
+    data class SetShowOverlayMenu(val enabled: Boolean) : SettingsUiEvent
     data class SetUpdateUrl(val url: String) : SettingsUiEvent
     data class TogglePlugin(val packageName: String, val enabled: Boolean) : SettingsUiEvent
     data object RefreshPlugins : SettingsUiEvent
@@ -82,6 +83,7 @@ class SettingsViewModel @Inject constructor(
             is SettingsUiEvent.SetLogCapacity -> update { it.copy(eventLogCapacity = event.capacity) }
             is SettingsUiEvent.SetIdleTeardown -> update { it.copy(idleTeardownMinutes = event.minutes) }
             is SettingsUiEvent.SetStartOnBoot -> update { it.copy(startServiceOnBoot = event.enabled) }
+            is SettingsUiEvent.SetShowOverlayMenu -> update { it.copy(showOverlayMenu = event.enabled) }
             is SettingsUiEvent.SetUpdateUrl -> update { it.copy(updateChannelUrl = event.url) }
             is SettingsUiEvent.TogglePlugin -> pluginRegistry.setEnabled(event.packageName, event.enabled)
             SettingsUiEvent.RefreshPlugins -> pluginRegistry.refresh()
