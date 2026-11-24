@@ -79,6 +79,14 @@ class GamesActivity : ComponentActivity() {
         label.text = getString(if (connected) R.string.games_connected else R.string.games_disconnected)
     }
 
+    /**
+     * Renders the added-games row and keeps [selectedGame] valid. This used to call [selectGame]
+     * whenever nothing was selected, and [selectGame] called straight back into [renderGames] --
+     * with zero games added (the default state on first open), that pair called each other
+     * forever and stack-overflowed the app ("Titan Mapper keeps stopping", reported against a
+     * fresh/empty Games screen). Fixed by having this function own reassigning [selectedGame]
+     * directly, with [selectGame] now only reachable from a real user tap on an existing tile.
+     */
     private fun renderGames() {
         binding.addedGamesRow.removeAllViews()
         games.forEach { game ->
@@ -92,16 +100,14 @@ class GamesActivity : ComponentActivity() {
             binding.addedGamesRow.addView(tile.root)
         }
         if (selectedGame == null || games.none { it.id == selectedGame?.id }) {
-            selectGame(games.firstOrNull())
-        } else {
-            renderSelectedTile()
+            selectedGame = games.firstOrNull()
         }
+        renderSelectedTile()
     }
 
-    private fun selectGame(game: MappingProfile?) {
+    private fun selectGame(game: MappingProfile) {
         selectedGame = game
         renderGames()
-        renderSelectedTile()
     }
 
     private fun renderSelectedTile() {
