@@ -10,10 +10,18 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import android.provider.Settings
 import androidx.core.app.NotificationCompat
+import com.titanmapper.core.data.settings.SettingsRepository
 import com.titanmapper.service.R
 import com.titanmapper.service.api.ServiceController
+import com.titanmapper.service.overlay.OverlayMenuManager
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -21,15 +29,33 @@ import javax.inject.Inject
  * foreground on Android 8+ to avoid background-execution limits, and must declare a foreground
  * service *type* on Android 14+; there is no closer-fitting type than `specialUse` for HID
  * remapping, declared with a justification string in AndroidManifest.xml.
+ *
+ * Also owns the real floating radial keymap overlay's lifecycle: [overlayMenuManager] is
+ * shown/hidden here (rather than from a second foreground service) by reactively collecting the
+ * user's `showOverlayMenu` setting for as long as this service runs, so flipping the Settings
+ * toggle while the service is already running shows/hides the overlay immediately.
  */
 @AndroidEntryPoint
 class TitanInputService : Service() {
 
     @Inject lateinit var controller: ServiceController
+    @Inject lateinit var settingsRepository: SettingsRepository
+    @Inject lateinit var overlayMenuManager: OverlayMenuManager
+
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     override fun onCreate() {
         super.onCreate()
         createChannel()
+        serviceScope.launch {
+            settingsRepository.settings.collect { settings ->
+                if (settings.showOverlayMenu && Settings.canDrawOverlays(this@TitanInputService)) {
+                    overlayMenuManager.show()
+                } else {
+                    overlayMenuManager.hide()
+                }
+            }
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -53,6 +79,8 @@ class TitanInputService : Service() {
 
     override fun onDestroy() {
         controller.stop()
+        overlayMenuManager.hide()
+        serviceScope.cancel()
         super.onDestroy()
     }
 

@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content">
+
+    <!-- Collapsed draggable handle; dragging moves the whole overlay, a plain tap expands it. -->
+    <FrameLayout
+        android:id="@+id/collapsedHandle"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:background="@drawable/bg_overlay_handle" />
+
+    <!-- Expanded panel: grip bar (drag/tap to collapse), Home/Settings row, hex action grid, and
+         a bottom stats bar driven by real LatencyMonitor/PerformanceMonitor/BatteryManager/
+         TrafficStats readings, never a fabricated number. -->
+    <LinearLayout
+        android:id="@+id/expandedPanel"
+        android:layout_width="260dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_overlay_panel"
+        android:padding="10dp"
+        android:visibility="gone">
+
+        <FrameLayout
+            android:id="@+id/gripBar"
+            android:layout_width="40dp"
+            android:layout_height="14dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="8dp"
+            android:background="@drawable/bg_overlay_handle" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginBottom="10dp">
+
+            <ImageButton
+                android:id="@+id/overlayHomeButton"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_marginEnd="16dp"
+                android:background="@drawable/bg_overlay_circle_button"
+                android:padding="10dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_overlay_home"
+                android:contentDescription="@string/overlay_home" />
+
+            <ImageButton
+                android:id="@+id/overlaySettingsButton"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="@drawable/bg_overlay_circle_button"
+                android:padding="10dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_overlay_settings"
+                android:contentDescription="@string/overlay_settings" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginBottom="6dp">
+
+            <ImageButton
+                android:id="@+id/hexKeymapConfigsButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginEnd="10dp"
+                android:background="@drawable/bg_overlay_hexagon"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_overlay_keymap_configs"
+                android:contentDescription="@string/overlay_keymap_configs" />
+
+            <ImageButton
+                android:id="@+id/hexEditKeymapButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginEnd="10dp"
+                android:background="@drawable/bg_overlay_hexagon"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_overlay_edit_keymap"
+                android:contentDescription="@string/overlay_edit_keymap" />
+
+            <ImageButton
+                android:id="@+id/hexKeymapSettingsButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/bg_overlay_hexagon"
+                android:padding="14dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_overlay_settings"
+                android:contentDescription="@string/overlay_keymap_settings" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginBottom="10dp">
+
+            <ImageButton
+                android:id="@+id/hexKeyboardTypingButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginEnd="10dp"
+                android:background="@drawable/bg_overlay_hexagon"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_overlay_keyboard_typing"
+                android:contentDescription="@string/overlay_keyboard_typing" />
+
+            <ImageButton
+                android:id="@+id/hexMacroButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginEnd="10dp"
+                android:background="@drawable/bg_overlay_hexagon"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_overlay_macro"
+                android:contentDescription="@string/overlay_macro" />
+
+            <ImageButton
+                android:id="@+id/hexRecoilControlButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/bg_overlay_hexagon"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_overlay_recoil"
+                android:contentDescription="@string/overlay_recoil_control" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/statsBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:background="@drawable/bg_overlay_stats_bar"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp">
+
+            <TextView
+                android:id="@+id/statsLatencyText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="-- ms"
+                android:textColor="@color/overlay_text_white"
+                android:textSize="11sp" />
+
+            <TextView
+                android:id="@+id/statsEventsText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="-- evt/s"
+                android:textColor="@color/overlay_text_white"
+                android:textSize="11sp" />
+
+            <TextView
+                android:id="@+id/statsBatteryText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="--%"
+                android:textColor="@color/overlay_text_white"
+                android:textSize="11sp" />
+
+            <TextView
+                android:id="@+id/statsNetworkText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="-- KB/s"
+                android:textColor="@color/overlay_text_white"
+                android:textSize="11sp" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

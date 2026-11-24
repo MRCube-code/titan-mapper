@@ -3,4 +3,14 @@
     <string name="service_input_label">Titan Mapper Input Service</string>
     <string name="accessibility_service_label">Titan Mapper Remapping</string>
     <string name="accessibility_service_description">Lets Titan Mapper intercept hardware key presses system-wide and perform touch gestures on your behalf, so your keyboard and mouse bindings work outside the Titan Mapper app. It does not read screen content.</string>
+
+    <!-- Real floating radial keymap overlay (OverlayMenuManager). -->
+    <string name="overlay_home">Home</string>
+    <string name="overlay_settings">Settings</string>
+    <string name="overlay_keymap_configs">Keymap Configs</string>
+    <string name="overlay_edit_keymap">Edit keymap</string>
+    <string name="overlay_keymap_settings">Keymap Settings</string>
+    <string name="overlay_keyboard_typing">Keyboard Typing</string>
+    <string name="overlay_macro">Macro</string>
+    <string name="overlay_recoil_control">Recoil control</string>
 </resources>

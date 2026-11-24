@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hexagon background for the 6 radial-menu action buttons, matching the reference
+     screenshot's hexagon tiles. Straight-line path only (6 vertices, one M + 5 L + Z) to keep
+     this trivially valid, with no arcs or curves to get wrong. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path
+        android:fillColor="@color/overlay_hex_indigo"
+        android:strokeColor="@color/overlay_hex_stroke"
+        android:strokeWidth="1.5"
+        android:pathData="M24,2 L44,13 L44,35 L24,46 L4,35 L4,13 Z" />
+</vector>

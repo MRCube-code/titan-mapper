@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Abstract "dial" glyph for Settings: a plain ring shape rather than a hand-drawn gear path,
+     deliberately, since simpler shapes here are less likely to contain a path-data mistake. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="ring"
+    android:innerRadiusRatio="2.6"
+    android:thicknessRatio="3.2"
+    android:useLevel="false">
+    <solid android:color="@color/overlay_text_white" />
+</shape>

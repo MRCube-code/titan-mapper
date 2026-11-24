@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Simple pencil glyph: a body polygon and a tip-cap polygon, straight lines only. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="@color/overlay_text_white"
+        android:pathData="M4,20 L4,17 L15,6 L18,9 L7,20 Z M15,6 L17,4 L20,7 L18,9 Z" />
+</vector>

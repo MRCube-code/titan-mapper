@@ -15,6 +15,11 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
+    // Needed for OverlayMenuManager's overlay_radial_menu.xml -- the real floating WindowManager
+    // overlay window, inflated and type-safely bound directly in :service (no Activity involved).
+    buildFeatures {
+        viewBinding = true
+    }
 }
 
 dependencies {

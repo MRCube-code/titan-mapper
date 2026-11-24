@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Palette for the real floating radial keymap overlay window (WindowManager-based,
+         OverlayMenuManager). Matches the dark navy/indigo look of the app module's other
+         "system" screens, but declared here since the overlay view is inflated by the service,
+         not by an Activity in :app. -->
+    <color name="overlay_handle_fill">#992C2A45</color>
+    <color name="overlay_handle_stroke">#B3FFFFFF</color>
+    <color name="overlay_panel_navy">#E62C2A45</color>
+    <color name="overlay_button_indigo">#5457B8</color>
+    <color name="overlay_hex_indigo">#4B4EA8</color>
+    <color name="overlay_hex_stroke">#8B8FE6</color>
+    <color name="overlay_stats_bg">#3C3F8E</color>
+    <color name="overlay_text_white">#FFFFFF</color>
+</resources>
