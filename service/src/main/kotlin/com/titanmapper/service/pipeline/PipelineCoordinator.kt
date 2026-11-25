@@ -309,6 +309,8 @@ class PipelineCoordinator @Inject constructor(
 
     override fun isKeyBound(key: com.titanmapper.core.model.KeyCode): Boolean = engine?.isKeyBound(key) ?: false
 
+    override fun isButtonBound(button: com.titanmapper.core.model.MouseButton): Boolean = engine?.isButtonBound(button) ?: false
+
     private fun backendFor(tier: PermissionTier): TierBackend = when (tier) {
         PermissionTier.STANDARD -> standardTier
         PermissionTier.ACCESSIBILITY -> accessibilityTier

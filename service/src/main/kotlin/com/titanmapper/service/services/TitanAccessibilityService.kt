@@ -42,6 +42,10 @@ class TitanAccessibilityService : AccessibilityService() {
      *  so no extra synchronization is needed to touch this from there. */
     private val consumedKeys = HashSet<Int>()
 
+    /** Same tracking as [consumedKeys], kept separate for the mouse-button-as-KEYCODE_BACK/FORWARD
+     *  case below -- see [onKeyEvent]'s KDoc. */
+    private val consumedMouseButtonKeys = HashSet<Int>()
+
     override fun onServiceConnected() {
         super.onServiceConnected()
         serviceInfo = serviceInfo?.apply {
@@ -50,11 +54,27 @@ class TitanAccessibilityService : AccessibilityService() {
             eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
         }
         consumedKeys.clear() // a freshly (re)connected service never already owns anything
+        consumedMouseButtonKeys.clear()
         instance = this
         _connected.value = true
     }
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
+        // Many mice report M4/M5 as a literal KEYCODE_BACK/KEYCODE_FORWARD KeyEvent rather than a
+        // button-press MotionEvent (AccessibilityService never receives generic motion events at
+        // all, so that path is unavailable here regardless -- a real, honest limitation of this
+        // tier, not a bug). KEYCODE_BACK is also the phone's real Back action, so this is only
+        // ever treated as a mouse button when the originating device actually reports a mouse
+        // source; every other KEYCODE_BACK/FORWARD (hardware key, nav bar, gesture) is left alone.
+        val device = android.view.InputDevice.getDevice(event.deviceId)
+        val fromMouse = device != null && (
+            device.supportsSource(android.view.InputDevice.SOURCE_MOUSE) ||
+                device.supportsSource(android.view.InputDevice.SOURCE_MOUSE_RELATIVE)
+            )
+        if (fromMouse && (event.keyCode == KeyEvent.KEYCODE_BACK || event.keyCode == KeyEvent.KEYCODE_FORWARD)) {
+            return handleMouseButtonAsKeyEvent(event)
+        }
+
         val keyCode = AndroidKeyCodeTranslator.fromAndroid(event.keyCode)
         if (keyCode == com.titanmapper.core.model.KeyCode.UNKNOWN) return false
 
@@ -84,6 +104,31 @@ class TitanAccessibilityService : AccessibilityService() {
                 monotonicNanos = System.nanoTime(),
                 sourceTier = CaptureTier.ACCESSIBILITY,
                 keyCode = keyCode,
+                action = if (event.action == KeyEvent.ACTION_DOWN) KeyAction.DOWN else KeyAction.UP
+            )
+        )
+        return true
+    }
+
+    private fun handleMouseButtonAsKeyEvent(event: KeyEvent): Boolean {
+        val button = if (event.keyCode == KeyEvent.KEYCODE_BACK) com.titanmapper.core.model.MouseButton.BACK
+        else com.titanmapper.core.model.MouseButton.FORWARD
+
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            if (event.repeatCount > 0) return event.keyCode in consumedMouseButtonKeys
+            if (!controller.isButtonBound(button)) return false
+            consumedMouseButtonKeys += event.keyCode
+        } else {
+            if (event.keyCode !in consumedMouseButtonKeys) return false
+            consumedMouseButtonKeys -= event.keyCode
+        }
+
+        bus.publish(
+            RawInputEvent.Button(
+                deviceFingerprint = fingerprintFor(event.deviceId),
+                monotonicNanos = System.nanoTime(),
+                sourceTier = CaptureTier.ACCESSIBILITY,
+                button = button,
                 action = if (event.action == KeyEvent.ACTION_DOWN) KeyAction.DOWN else KeyAction.UP
             )
         )

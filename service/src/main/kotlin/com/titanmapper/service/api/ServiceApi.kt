@@ -6,6 +6,7 @@ import com.titanmapper.core.model.CapabilitySnapshot
 import com.titanmapper.core.model.KeyCode
 import com.titanmapper.core.model.MacroDefinition
 import com.titanmapper.core.model.MacroStep
+import com.titanmapper.core.model.MouseButton
 import com.titanmapper.core.model.PermissionTier
 import com.titanmapper.core.model.RawInputEvent
 import kotlinx.coroutines.flow.SharedFlow
@@ -44,6 +45,9 @@ interface ServiceController {
      * tier is turned on. False (never swallow) when the pipeline isn't running at all.
      */
     fun isKeyBound(key: KeyCode): Boolean
+
+    /** Same purpose as [isKeyBound], for a mouse button (M4/M5 included). See [isKeyBound]'s KDoc. */
+    fun isButtonBound(button: MouseButton): Boolean
 }
 
 /** Which tiers are usable right now (root granted, Shizuku bound, accessibility enabled). */

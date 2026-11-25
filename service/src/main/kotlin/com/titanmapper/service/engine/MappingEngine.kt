@@ -77,6 +77,16 @@ class MappingEngine(
     }
 
     /**
+     * Same purpose as [isKeyBound] but for a mouse button -- needed because some mice report
+     * M4/M5 as a literal `KEYCODE_BACK`/`KEYCODE_FORWARD` [com.titanmapper.core.model.RawInputEvent.Key]
+     * instead of a button-press event, and a system-wide capture tier must know whether that
+     * specific mouse button is actually bound before deciding to swallow it (swallowing an
+     * unbound one would break the phone's real Back/Forward navigation).
+     */
+    fun isButtonBound(button: com.titanmapper.core.model.MouseButton): Boolean =
+        index.mouse[button]?.isEnabled == true
+
+    /**
      * Release every held/toggled/repeating action. Call before switching profiles or when the
      * capture tier is demoted/torn down, so no injected key is ever left stuck down.
      */
