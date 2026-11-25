@@ -3,7 +3,9 @@ package com.titanmapper.feature.mapping
 import android.view.KeyEvent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -59,6 +61,14 @@ internal object EditorKeyCodeTranslator {
  * A focusable surface that captures the next physical key the user presses and reports it as a
  * [KeyCode], used by the binding editor's "press a key to bind" flow. Captures on key-down only
  * and consumes the event so it never leaks into the rest of the UI (e.g. triggering navigation).
+ *
+ * This box used to never actually request focus: it was `.focusable()` with `onPreviewKeyEvent`,
+ * but nothing ever called `FocusRequester.requestFocus()`. Android only routes hardware key events
+ * to whichever element currently has focus, so with no focus request, key presses never reached
+ * this box at all -- tapping it and pressing a key silently did nothing, which is exactly the
+ * "binding doesn't work" symptom. Fixed by requesting focus both automatically on first
+ * composition and on every tap (`clickable`), so the capture box behaves the way its own label
+ * ("Tap here, then press a key") already promises.
  */
 @Composable
 fun TriggerCaptureBox(
@@ -67,6 +77,9 @@ fun TriggerCaptureBox(
     onKeyCaptured: (KeyCode) -> Unit
 ) {
     val focusRequester = remember { FocusRequester() }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -74,6 +87,10 @@ fun TriggerCaptureBox(
             .border(BorderStroke(1.dp, MaterialTheme.colorScheme.primary), RoundedCornerShape(8.dp))
             .focusRequester(focusRequester)
             .focusable()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { focusRequester.requestFocus() }
             .onPreviewKeyEvent { event ->
                 if (event.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
                     val code = EditorKeyCodeTranslator.fromAndroid(event.nativeKeyEvent.keyCode)
