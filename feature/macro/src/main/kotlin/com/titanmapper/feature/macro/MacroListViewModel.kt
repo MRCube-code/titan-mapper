@@ -42,18 +42,34 @@ class MacroListViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val message = MutableStateFlow<String?>(null)
-    var createdMacroId: String? = null; private set
+
+    /**
+     * Set once the newly-created macro has actually been persisted, so the screen can react to it
+     * with a [StateFlow] collector instead of racing it. This used to be a plain `var` set at the
+     * end of the `CreateMacro` coroutine, read from a `LaunchedEffect` that was triggered by a
+     * separate boolean flipped synchronously on click -- since `repository.save()` is a suspend DB
+     * write, that `LaunchedEffect` ran and read the still-null `var` before the save ever
+     * completed, so tapping "New macro" silently created the macro but never navigated to its
+     * editor. A `StateFlow` fixes this: the screen now collects it directly, so Compose reacts
+     * exactly when the value actually changes, however long the save takes.
+     */
+    private val _navigateToMacroId = MutableStateFlow<String?>(null)
+    val navigateToMacroId: StateFlow<String?> get() = _navigateToMacroId
 
     val uiState: StateFlow<MacroListUiState> = combine(repository.observeMacros(), runner.running, message) { macros, running, msg ->
         MacroListUiState(macros, running, msg)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MacroListUiState())
+
+    fun onNavigationHandled() {
+        _navigateToMacroId.value = null
+    }
 
     fun onEvent(event: MacroListUiEvent) {
         when (event) {
             MacroListUiEvent.CreateMacro -> viewModelScope.launch {
                 val macro = MacroDefinition(id = UUID.randomUUID().toString(), name = "New macro", steps = emptyList())
                 repository.save(macro)
-                createdMacroId = macro.id
+                _navigateToMacroId.value = macro.id
             }
             is MacroListUiEvent.Duplicate -> viewModelScope.launch {
                 val source = repository.get(event.id) ?: return@launch

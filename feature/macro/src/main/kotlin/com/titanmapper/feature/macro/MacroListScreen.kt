@@ -66,18 +66,22 @@ fun MacroListRoute(onEditMacro: (String) -> Unit, viewModel: MacroListViewModel 
         exportText = null
     }
 
-    var pendingNavigate by remember { mutableStateOf(false) }
-    LaunchedEffect(pendingNavigate) {
-        if (pendingNavigate) {
-            viewModel.createdMacroId?.let(onEditMacro)
-            pendingNavigate = false
+    // Was a boolean flipped synchronously on click + a `var` read from a LaunchedEffect keyed on
+    // it -- since creating a macro does a suspend DB write before the id is known, that read
+    // always ran before the id existed, so "New macro" silently created a macro and never opened
+    // its editor. Collecting the id as a StateFlow makes Compose react once it's actually set.
+    val navigateToMacroId by viewModel.navigateToMacroId.collectAsStateWithLifecycle()
+    LaunchedEffect(navigateToMacroId) {
+        navigateToMacroId?.let {
+            onEditMacro(it)
+            viewModel.onNavigationHandled()
         }
     }
 
     Scaffold(
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = { viewModel.onEvent(MacroListUiEvent.CreateMacro); pendingNavigate = true },
+                onClick = { viewModel.onEvent(MacroListUiEvent.CreateMacro) },
                 icon = { Icon(Icons.Filled.Add, null) },
                 text = { Text("New macro") }
             )
