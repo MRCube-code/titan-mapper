@@ -61,7 +61,7 @@ fun DiagnosticsRoute(viewModel: DiagnosticsViewModel = hiltViewModel()) {
             Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("Event log") })
         }
         when (tab) {
-            0 -> LiveEventsTab(state, viewModel::onEvent)
+            0 -> LiveEventsTab(state, viewModel::onEvent, viewModel::isBound)
             1 -> PerformanceTab(state, viewModel::onEvent)
             else -> EventLogTab(logs, state.logFilter, viewModel::onEvent) {
                 scope.launch {
@@ -78,26 +78,34 @@ fun DiagnosticsRoute(viewModel: DiagnosticsViewModel = hiltViewModel()) {
 }
 
 @Composable
-private fun LiveEventsTab(state: DiagnosticsUiState, onEvent: (DiagnosticsUiEvent) -> Unit) {
+private fun LiveEventsTab(state: DiagnosticsUiState, onEvent: (DiagnosticsUiEvent) -> Unit, isBound: (RawInputEvent) -> Boolean?) {
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(TitanSpacing.m),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("${state.recentEvents.size} captured", style = MaterialTheme.typography.bodyMedium)
+            // Real counters only -- Captured and Dropped both come straight from the actual
+            // capture bus (InputEventBus.droppedCount via PerformanceSnapshot), never fabricated.
+            // "Mapped now" counts, among the events currently in this list, how many reference a
+            // key/mouse button that is bound right now (see DiagnosticsViewModel.isBound's KDoc
+            // on why this is a live check, not a historical record of what happened at capture).
+            val mappedNow = state.recentEvents.count { isBound(it) == true }
+            Column {
+                Text("${state.recentEvents.size} captured · $mappedNow mapped now · ${state.performance.droppedEvents} dropped", style = MaterialTheme.typography.bodyMedium)
+            }
             IconButton(onClick = { onEvent(DiagnosticsUiEvent.TogglePause) }) {
                 Icon(if (state.paused) Icons.Filled.PlayArrow else Icons.Filled.Pause, contentDescription = if (state.paused) "Resume" else "Pause")
             }
         }
         LazyColumn(contentPadding = PaddingValues(horizontal = TitanSpacing.m)) {
-            items(state.recentEvents) { event -> EventRow(event) }
+            items(state.recentEvents) { event -> EventRow(event, isBound(event)) }
         }
     }
 }
 
 @Composable
-private fun EventRow(event: RawInputEvent) {
+private fun EventRow(event: RawInputEvent, bound: Boolean?) {
     val (label, color) = when (event) {
         is RawInputEvent.Key -> "${event.action.label()} key ${event.keyCode}" to MaterialTheme.colorScheme.primary
         is RawInputEvent.Button -> "${event.action.label()} ${event.button}" to MaterialTheme.colorScheme.secondary
@@ -105,9 +113,26 @@ private fun EventRow(event: RawInputEvent) {
         is RawInputEvent.Scroll -> "Scroll ${event.direction}" to MaterialTheme.colorScheme.tertiary
         is RawInputEvent.DeviceConnectionChanged -> "${if (event.connected) "Connected" else "Disconnected"}: ${event.deviceFingerprint.deviceName}" to MaterialTheme.colorScheme.error
     }
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, style = MaterialTheme.typography.bodySmall, color = color)
-        Text(event.sourceTier.name, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    val fp = event.deviceFingerprint
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = TitanSpacing.xs)) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(label, style = MaterialTheme.typography.bodySmall, color = color)
+            Row(horizontalArrangement = Arrangement.spacedBy(TitanSpacing.s)) {
+                if (bound != null) {
+                    Text(
+                        if (bound) "Bound" else "Unbound",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (bound) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Text(event.sourceTier.name, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        Text(
+            "${fp.deviceName} · vendor ${fp.vendorId.toString(16)} product ${fp.productId.toString(16)}",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

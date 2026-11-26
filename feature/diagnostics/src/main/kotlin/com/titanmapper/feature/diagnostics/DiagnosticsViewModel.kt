@@ -12,6 +12,7 @@ import com.titanmapper.service.api.LatencyMonitor
 import com.titanmapper.service.api.LatencyStats
 import com.titanmapper.service.api.PerformanceMonitor
 import com.titanmapper.service.api.PerformanceSnapshot
+import com.titanmapper.service.api.ServiceController
 import com.titanmapper.service.pipeline.LatencyMonitorImpl
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,7 +45,8 @@ class DiagnosticsViewModel @Inject constructor(
     private val latencyMonitor: LatencyMonitor,
     private val performanceMonitor: PerformanceMonitor,
     private val eventLog: EventLogRepository,
-    private val settings: SettingsRepository
+    private val settings: SettingsRepository,
+    private val controller: ServiceController
 ) : ViewModel() {
 
     private val recent = MutableStateFlow<List<RawInputEvent>>(emptyList())
@@ -93,6 +95,22 @@ class DiagnosticsViewModel @Inject constructor(
     }
 
     suspend fun exportText(): String = eventLog.exportText()
+
+    /**
+     * Whether a key/button event's key or mouse button has a currently-enabled binding -- note
+     * this reflects the CURRENT profile/binding state, not necessarily the state at the moment
+     * the event was captured (the binding could have changed since, e.g. a profile switch). It
+     * is deliberately not claimed to be "whether this exact past event was dispatched" -- that
+     * would require correlating against MappingEngine's dispatch-result callback, which this
+     * screen does not yet do; this is an honest, currently-true "would this be captured right
+     * now" check, not a historical record. Null for event kinds a binding can't apply to
+     * (pointer motion, scroll, device connect/disconnect).
+     */
+    fun isBound(event: RawInputEvent): Boolean? = when (event) {
+        is RawInputEvent.Key -> controller.isKeyBound(event.keyCode)
+        is RawInputEvent.Button -> controller.isButtonBound(event.button)
+        else -> null
+    }
 
     private companion object {
         const val MAX_EVENTS = 200
