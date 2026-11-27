@@ -2,6 +2,8 @@ package com.titanmapper.feature.mapping
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,6 +50,15 @@ import com.titanmapper.core.ui.theme.TitanSpacing
 import com.titanmapper.service.api.PluginInfo
 
 private enum class TriggerKind { KEY, COMBO, MOUSE, SCROLL }
+
+/** Phone hardware keys an app can't receive as typed key events, so they're picked from chips. */
+private val PHONE_OUTPUT_KEYS = listOf(
+    com.titanmapper.core.model.KeyCode.POWER, com.titanmapper.core.model.KeyCode.VOLUME_UP,
+    com.titanmapper.core.model.KeyCode.VOLUME_DOWN, com.titanmapper.core.model.KeyCode.VOLUME_MUTE,
+    com.titanmapper.core.model.KeyCode.NAV_HOME, com.titanmapper.core.model.KeyCode.NAV_BACK,
+    com.titanmapper.core.model.KeyCode.APP_SWITCH, com.titanmapper.core.model.KeyCode.CAMERA,
+    com.titanmapper.core.model.KeyCode.BRIGHTNESS_UP, com.titanmapper.core.model.KeyCode.BRIGHTNESS_DOWN
+)
 private enum class ActionKind { TOUCH_TAP, TOUCH_DRAG, KEY_INJECT, MOUSE_INJECT, SYSTEM, APP_LAUNCH, MACRO, PLUGIN, NONE }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -74,6 +85,10 @@ fun BindingEditorSheet(
     var tapX by remember { mutableFloatStateOf((existing?.action as? MappedAction.TouchTap)?.normalizedX ?: 0.5f) }
     var tapY by remember { mutableFloatStateOf((existing?.action as? MappedAction.TouchTap)?.normalizedY ?: 0.5f) }
     var injectKey by remember { mutableStateOf((existing?.action as? MappedAction.KeyInjection)?.key ?: com.titanmapper.core.model.KeyCode.A) }
+    // Separate from [mouseButton] (the TRIGGER's button): they used to share one variable, so
+    // picking the output button silently changed the trigger too and "M4 -> Left click" was
+    // impossible to create.
+    var outMouseButton by remember { mutableStateOf((existing?.action as? MappedAction.MouseInjection.ButtonPress)?.button ?: MouseButton.LEFT) }
     var systemType by remember { mutableStateOf((existing?.action as? MappedAction.SystemAction)?.type ?: SystemActionType.BACK) }
     var appPackage by remember { mutableStateOf((existing?.action as? MappedAction.AppLaunch)?.packageName ?: "") }
     var macroId by remember { mutableStateOf((existing?.action as? MappedAction.MacroRun)?.macroId ?: macros.firstOrNull()?.id ?: "") }
@@ -128,9 +143,15 @@ fun BindingEditorSheet(
             when (actionKind) {
                 ActionKind.TOUCH_TAP -> TapSurface(tapX, tapY) { x, y -> tapX = x; tapY = y }
                 ActionKind.TOUCH_DRAG -> Text("Drag endpoints default to center-to-center; fine-tune in the overlay editor.", style = MaterialTheme.typography.bodySmall)
-                ActionKind.KEY_INJECT -> TriggerCaptureBox(label = injectKey.displayName()) { injectKey = it }
-                ActionKind.MOUSE_INJECT -> Row { MouseButton.entries.forEach { b ->
-                    FilterChip(selected = mouseButton == b, onClick = { mouseButton = b }, label = { Text(b.displayName()) }, modifier = Modifier.padding(end = TitanSpacing.xs))
+                ActionKind.KEY_INJECT -> Column(verticalArrangement = Arrangement.spacedBy(TitanSpacing.xs)) {
+                    TriggerCaptureBox(label = injectKey.displayName()) { injectKey = it }
+                    Text("Or pick a phone key (can't be typed):", style = MaterialTheme.typography.bodySmall)
+                    Row(modifier = Modifier.horizontalScroll(rememberScrollState())) { PHONE_OUTPUT_KEYS.forEach { k ->
+                        FilterChip(selected = injectKey == k, onClick = { injectKey = k }, label = { Text(k.displayName()) }, modifier = Modifier.padding(end = TitanSpacing.xs))
+                    } }
+                }
+                ActionKind.MOUSE_INJECT -> Row(modifier = Modifier.horizontalScroll(rememberScrollState())) { MouseButton.entries.forEach { b ->
+                    FilterChip(selected = outMouseButton == b, onClick = { outMouseButton = b }, label = { Text(b.displayName()) }, modifier = Modifier.padding(end = TitanSpacing.xs))
                 } }
                 ActionKind.SYSTEM -> Row { SystemActionType.entries.forEach { t ->
                     FilterChip(selected = systemType == t, onClick = { systemType = t }, label = { Text(t.name) }, modifier = Modifier.padding(end = TitanSpacing.xs))
@@ -155,7 +176,7 @@ fun BindingEditorSheet(
                 ActionKind.NONE -> Text("No action — disables this trigger without deleting it.", style = MaterialTheme.typography.bodySmall)
             }
 
-            val action = buildAction(actionKind, tapX, tapY, injectKey, mouseButton, systemType, appPackage, macroId, pluginChoice)
+            val action = buildAction(actionKind, tapX, tapY, injectKey, outMouseButton, systemType, appPackage, macroId, pluginChoice)
             if (action != null && !tierCapability.supports(action)) {
                 StatusChip(text = "This profile's tier can't perform this action", kind = StatusKind.WARN)
             }
