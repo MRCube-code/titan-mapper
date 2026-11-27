@@ -74,6 +74,14 @@ object AndroidKeyCodeTranslator {
         put(KeyEvent.KEYCODE_VOLUME_MUTE, KeyCode.VOLUME_MUTE)
         put(KeyEvent.KEYCODE_SYSRQ, KeyCode.PRINT_SCREEN); put(KeyEvent.KEYCODE_BREAK, KeyCode.PAUSE_BREAK)
         put(KeyEvent.KEYCODE_MENU, KeyCode.MENU)
+        // Phone hardware / system keys. Capture-side note: a mouse's M4/M5 that arrives as
+        // KEYCODE_BACK/FORWARD is intercepted by the capture tiers BEFORE this table is consulted
+        // (see ActivityInputBridgeImpl / TitanAccessibilityService), so NAV_BACK here only ever
+        // means a real phone/keyboard Back key, and a tier only swallows it if it is bound.
+        put(KeyEvent.KEYCODE_POWER, KeyCode.POWER); put(KeyEvent.KEYCODE_BACK, KeyCode.NAV_BACK)
+        put(KeyEvent.KEYCODE_HOME, KeyCode.NAV_HOME); put(KeyEvent.KEYCODE_APP_SWITCH, KeyCode.APP_SWITCH)
+        put(KeyEvent.KEYCODE_CAMERA, KeyCode.CAMERA)
+        put(KeyEvent.KEYCODE_BRIGHTNESS_UP, KeyCode.BRIGHTNESS_UP); put(KeyEvent.KEYCODE_BRIGHTNESS_DOWN, KeyCode.BRIGHTNESS_DOWN)
     }
 
     private val TITAN_TO_ANDROID: Map<KeyCode, Int> =

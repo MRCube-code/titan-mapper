@@ -66,6 +66,17 @@ class ShizukuTier @Inject constructor(
 
         private fun injectKey(androidKeyCode: Int?, phase: DispatchPhase): Boolean {
             if (androidKeyCode == null) return false
+            if (phase == DispatchPhase.ONCE) {
+                // TAP-mode bindings (the default: "press M5 -> press Z") and every REPEAT tick are
+                // dispatched as ONCE. This function used to treat anything that wasn't UP as a
+                // key-DOWN, so a ONCE sent a down and never an up: the mapped key stayed held
+                // (and auto-repeating) in the target app until some other event released it. A
+                // ONCE is a complete press: down, then up. Both are always attempted so a failed
+                // down can never leave a stray up unsent, and success means both were injected.
+                val downOk = injectKey(androidKeyCode, DispatchPhase.DOWN)
+                val upOk = injectKey(androidKeyCode, DispatchPhase.UP)
+                return downOk && upOk
+            }
             val method = injectMethod ?: return false
             val binder = inputManagerBinder ?: return false
             val now = android.os.SystemClock.uptimeMillis()
@@ -95,6 +106,23 @@ class ShizukuTier @Inject constructor(
          * buttonState, honestly insufficient for apps that require a real absolute coordinate.
          */
         private fun injectMouseButton(button: com.titanmapper.core.model.MouseButton, phase: DispatchPhase): Boolean {
+            if (phase == DispatchPhase.ONCE) {
+                // Same ONCE = full press (down then up) rule as injectKey; previously a ONCE click
+                // sent only the press half.
+                val downOk = injectMouseButton(button, DispatchPhase.DOWN)
+                val upOk = injectMouseButton(button, DispatchPhase.UP)
+                return downOk && upOk
+            }
+            // M4/M5 (Back/Forward) are not MotionEvents on a real Android device: the framework
+            // turns a mouse's side-button into KEYCODE_BACK / KEYCODE_FORWARD key events before apps
+            // see them, and an injected ACTION_BUTTON_PRESS bypasses that conversion, so it did
+            // nothing. Inject the same key events the framework itself would have produced.
+            val navKey = when (button) {
+                com.titanmapper.core.model.MouseButton.BACK, com.titanmapper.core.model.MouseButton.EXTRA_1 -> KeyEvent.KEYCODE_BACK
+                com.titanmapper.core.model.MouseButton.FORWARD, com.titanmapper.core.model.MouseButton.EXTRA_2 -> KeyEvent.KEYCODE_FORWARD
+                else -> null
+            }
+            if (navKey != null) return injectKey(navKey, phase)
             val method = injectMethod ?: return false
             val binder = inputManagerBinder ?: return false
             val now = android.os.SystemClock.uptimeMillis()

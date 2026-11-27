@@ -62,6 +62,12 @@ enum class KeyCode {
     VOLUME_UP, VOLUME_DOWN, VOLUME_MUTE,
     PRINT_SCREEN, PAUSE_BREAK, MENU,
 
+    // --- Phone hardware / system keys ---
+    // Needed so the phone's own buttons can be remapped (e.g. Volume Up -> Power). NAV_BACK and
+    // NAV_HOME are deliberately separate from the keyboard's BACKSPACE/HOME so a keyboard's Home
+    // key and the phone's Home action can never be confused for one another in a binding.
+    POWER, NAV_BACK, NAV_HOME, APP_SWITCH, CAMERA, BRIGHTNESS_UP, BRIGHTNESS_DOWN,
+
     /** Sentinel for a physical key our translator saw but doesn't yet have a mapping for. */
     UNKNOWN
 }

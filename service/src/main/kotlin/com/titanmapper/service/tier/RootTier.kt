@@ -72,11 +72,24 @@ class RootTier @Inject constructor(
     override val sink = object : OutputDispatchSink {
         override val tier = CaptureTier.ROOT
 
+        /** Keys whose DOWN was successfully injected and whose UP hasn't been reported yet. */
+        private val tappedKeys = java.util.Collections.synchronizedSet(HashSet<KeyCode>())
+
         override fun dispatch(action: MappedAction, phase: DispatchPhase): Boolean {
             val cmd = when (action) {
-                is MappedAction.KeyInjection ->
-                    if (phase == DispatchPhase.UP) null // `input keyevent` is a full press+release; nothing to send on UP
-                    else androidKeyEventName(action.key)?.let { "input keyevent $it" }
+                is MappedAction.KeyInjection -> {
+                    // `input keyevent` is a complete press+release in one command, so on this tier a
+                    // HOLD binding behaves as a single tap at key-down (a true held key needs the
+                    // native uinput helper). The UP phase therefore sends nothing -- but it used to
+                    // report `false` ("dispatch failed") for every single key release, which made
+                    // the event log claim failures that never happened. It now reports success
+                    // exactly when the matching DOWN really was injected, and failure otherwise.
+                    if (phase == DispatchPhase.UP) return tappedKeys.remove(action.key)
+                    val name = androidKeyEventName(action.key) ?: return false
+                    val ok = Shell.cmd("input keyevent $name").exec().isSuccess
+                    if (ok && phase == DispatchPhase.DOWN) tappedKeys += action.key
+                    return ok
+                }
                 is MappedAction.TouchTap ->
                     if (phase != DispatchPhase.UP) "input tap ${px(action.normalizedX, true)} ${px(action.normalizedY, false)}" else null
                 is MappedAction.TouchDrag -> "input swipe ${px(action.fromX, true)} ${px(action.fromY, false)} " +
@@ -291,25 +304,61 @@ class RootTier @Inject constructor(
         )
 
         /**
-         * Evdev `KEY_*` codes (input-event-codes.h) that differ in numbering from Android's
-         * KeyEvent constants, mapped straight to [KeyCode]. Only a practical subset is listed;
-         * [EVDEV_BUTTON_CODES] above intercepts mouse buttons before this map is consulted.
+         * Evdev `KEY_*` codes (linux/input-event-codes.h) -> [KeyCode]. [EVDEV_BUTTON_CODES] above
+         * intercepts mouse buttons before this map is consulted.
+         *
+         * This used to cover only about half a keyboard: no F-keys, no punctuation, no numpad, no
+         * Home/End/PageUp/PageDown/Insert/Delete, no media keys, and -- critically for remapping the
+         * phone itself -- no Volume Up/Down/Mute, Power, Back, Home, App-switch, Camera or
+         * Brightness. Every unmapped code was silently dropped by [handleKey] (`?: return`), so on
+         * the Root tier those keys could not be captured, bound, or even seen in diagnostics.
          */
         val EVDEV_TO_KEYCODE: Map<Int, KeyCode> = mapOf(
-            1 to KeyCode.ESCAPE, 2 to KeyCode.DIGIT_1, 3 to KeyCode.DIGIT_2, 4 to KeyCode.DIGIT_3,
-            5 to KeyCode.DIGIT_4, 6 to KeyCode.DIGIT_5, 7 to KeyCode.DIGIT_6, 8 to KeyCode.DIGIT_7,
-            9 to KeyCode.DIGIT_8, 10 to KeyCode.DIGIT_9, 11 to KeyCode.DIGIT_0,
-            14 to KeyCode.BACKSPACE, 15 to KeyCode.TAB, 16 to KeyCode.Q, 17 to KeyCode.W,
-            18 to KeyCode.E, 19 to KeyCode.R, 20 to KeyCode.T, 21 to KeyCode.Y, 22 to KeyCode.U,
-            23 to KeyCode.I, 24 to KeyCode.O, 25 to KeyCode.P, 28 to KeyCode.ENTER,
-            29 to KeyCode.CTRL_LEFT, 30 to KeyCode.A, 31 to KeyCode.S, 32 to KeyCode.D,
-            33 to KeyCode.F, 34 to KeyCode.G, 35 to KeyCode.H, 36 to KeyCode.J, 37 to KeyCode.K,
-            38 to KeyCode.L, 42 to KeyCode.SHIFT_LEFT, 44 to KeyCode.Z, 45 to KeyCode.X,
-            46 to KeyCode.C, 47 to KeyCode.V, 48 to KeyCode.B, 49 to KeyCode.N, 50 to KeyCode.M,
-            54 to KeyCode.SHIFT_RIGHT, 56 to KeyCode.ALT_LEFT, 57 to KeyCode.SPACE,
-            58 to KeyCode.CAPS_LOCK, 97 to KeyCode.CTRL_RIGHT, 100 to KeyCode.ALT_RIGHT,
-            103 to KeyCode.ARROW_UP, 105 to KeyCode.ARROW_LEFT, 106 to KeyCode.ARROW_RIGHT,
-            108 to KeyCode.ARROW_DOWN
+            // Letters
+            30 to KeyCode.A, 48 to KeyCode.B, 46 to KeyCode.C, 32 to KeyCode.D, 18 to KeyCode.E,
+            33 to KeyCode.F, 34 to KeyCode.G, 35 to KeyCode.H, 23 to KeyCode.I, 36 to KeyCode.J,
+            37 to KeyCode.K, 38 to KeyCode.L, 50 to KeyCode.M, 49 to KeyCode.N, 24 to KeyCode.O,
+            25 to KeyCode.P, 16 to KeyCode.Q, 19 to KeyCode.R, 31 to KeyCode.S, 20 to KeyCode.T,
+            22 to KeyCode.U, 47 to KeyCode.V, 17 to KeyCode.W, 45 to KeyCode.X, 21 to KeyCode.Y,
+            44 to KeyCode.Z,
+            // Digits (top row)
+            2 to KeyCode.DIGIT_1, 3 to KeyCode.DIGIT_2, 4 to KeyCode.DIGIT_3, 5 to KeyCode.DIGIT_4,
+            6 to KeyCode.DIGIT_5, 7 to KeyCode.DIGIT_6, 8 to KeyCode.DIGIT_7, 9 to KeyCode.DIGIT_8,
+            10 to KeyCode.DIGIT_9, 11 to KeyCode.DIGIT_0,
+            // Function row
+            59 to KeyCode.F1, 60 to KeyCode.F2, 61 to KeyCode.F3, 62 to KeyCode.F4, 63 to KeyCode.F5,
+            64 to KeyCode.F6, 65 to KeyCode.F7, 66 to KeyCode.F8, 67 to KeyCode.F9, 68 to KeyCode.F10,
+            87 to KeyCode.F11, 88 to KeyCode.F12,
+            // Modifiers and locks
+            42 to KeyCode.SHIFT_LEFT, 54 to KeyCode.SHIFT_RIGHT, 29 to KeyCode.CTRL_LEFT,
+            97 to KeyCode.CTRL_RIGHT, 56 to KeyCode.ALT_LEFT, 100 to KeyCode.ALT_RIGHT,
+            125 to KeyCode.META_LEFT, 126 to KeyCode.META_RIGHT, 58 to KeyCode.CAPS_LOCK,
+            69 to KeyCode.NUM_LOCK, 70 to KeyCode.SCROLL_LOCK,
+            // Whitespace / editing / navigation
+            57 to KeyCode.SPACE, 28 to KeyCode.ENTER, 15 to KeyCode.TAB, 14 to KeyCode.BACKSPACE,
+            111 to KeyCode.DELETE, 1 to KeyCode.ESCAPE, 110 to KeyCode.INSERT, 102 to KeyCode.HOME,
+            107 to KeyCode.END, 104 to KeyCode.PAGE_UP, 109 to KeyCode.PAGE_DOWN,
+            103 to KeyCode.ARROW_UP, 108 to KeyCode.ARROW_DOWN, 105 to KeyCode.ARROW_LEFT,
+            106 to KeyCode.ARROW_RIGHT,
+            // Punctuation
+            12 to KeyCode.MINUS, 13 to KeyCode.EQUALS, 26 to KeyCode.LEFT_BRACKET,
+            27 to KeyCode.RIGHT_BRACKET, 43 to KeyCode.BACKSLASH, 39 to KeyCode.SEMICOLON,
+            40 to KeyCode.APOSTROPHE, 41 to KeyCode.GRAVE, 51 to KeyCode.COMMA, 52 to KeyCode.PERIOD,
+            53 to KeyCode.SLASH,
+            // Numpad
+            82 to KeyCode.NUMPAD_0, 79 to KeyCode.NUMPAD_1, 80 to KeyCode.NUMPAD_2, 81 to KeyCode.NUMPAD_3,
+            75 to KeyCode.NUMPAD_4, 76 to KeyCode.NUMPAD_5, 77 to KeyCode.NUMPAD_6, 71 to KeyCode.NUMPAD_7,
+            72 to KeyCode.NUMPAD_8, 73 to KeyCode.NUMPAD_9, 98 to KeyCode.NUMPAD_DIVIDE,
+            55 to KeyCode.NUMPAD_MULTIPLY, 74 to KeyCode.NUMPAD_SUBTRACT, 78 to KeyCode.NUMPAD_ADD,
+            96 to KeyCode.NUMPAD_ENTER, 83 to KeyCode.NUMPAD_DECIMAL,
+            // Media / system on keyboards
+            164 to KeyCode.MEDIA_PLAY_PAUSE, 163 to KeyCode.MEDIA_NEXT, 165 to KeyCode.MEDIA_PREVIOUS,
+            99 to KeyCode.PRINT_SCREEN, 119 to KeyCode.PAUSE_BREAK, 127 to KeyCode.MENU, 139 to KeyCode.MENU,
+            // Phone hardware keys (gpio-keys / pmic power-key input devices)
+            115 to KeyCode.VOLUME_UP, 114 to KeyCode.VOLUME_DOWN, 113 to KeyCode.VOLUME_MUTE,
+            116 to KeyCode.POWER, 158 to KeyCode.NAV_BACK, 172 to KeyCode.NAV_HOME,
+            580 to KeyCode.APP_SWITCH, 212 to KeyCode.CAMERA,
+            225 to KeyCode.BRIGHTNESS_UP, 224 to KeyCode.BRIGHTNESS_DOWN
         )
     }
 }
