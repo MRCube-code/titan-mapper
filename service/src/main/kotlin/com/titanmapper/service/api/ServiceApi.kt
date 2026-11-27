@@ -9,6 +9,7 @@ import com.titanmapper.core.model.MacroStep
 import com.titanmapper.core.model.MouseButton
 import com.titanmapper.core.model.PermissionTier
 import com.titanmapper.core.model.RawInputEvent
+import com.titanmapper.core.model.SelfTestResult
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -129,4 +130,18 @@ interface PluginRegistry {
     val plugins: StateFlow<List<PluginInfo>>
     fun refresh()
     fun setEnabled(packageName: String, enabled: Boolean)
+}
+
+/**
+ * Runs the diagnostics self-test suite (Architecture: capability repair pass). Every check reads
+ * REAL runtime state (Settings.Secure, Shizuku's binder, libsu, the live InputEventBus, the active
+ * profile's actual bindings) -- there is no step here that returns a hardcoded verdict. A couple
+ * of checks are inherently interactive (they wait a short window for the person to press a real
+ * key/button) because that is the only honest way to verify hardware capture without inventing a
+ * synthetic event the real pipeline never actually saw.
+ */
+interface SelfTestRunner {
+    /** Runs every check in order and returns all 15 results. Suspends for the full duration of
+     * the interactive checks (each bounded by its own timeout), so this can take several seconds. */
+    suspend fun runAll(onProgress: (SelfTestResult) -> Unit = {}): List<SelfTestResult>
 }

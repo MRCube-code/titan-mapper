@@ -8,6 +8,7 @@ import com.titanmapper.service.api.MacroRecorder
 import com.titanmapper.service.api.MacroRunner
 import com.titanmapper.service.api.PerformanceMonitor
 import com.titanmapper.service.api.PluginRegistry
+import com.titanmapper.service.api.SelfTestRunner
 import com.titanmapper.service.api.ServiceController
 import com.titanmapper.service.input.ActivityInputBridgeImpl
 import com.titanmapper.service.input.InputEventBus
@@ -18,6 +19,7 @@ import com.titanmapper.service.pipeline.LatencyMonitorImpl
 import com.titanmapper.service.pipeline.PerformanceMonitorImpl
 import com.titanmapper.service.pipeline.PipelineCoordinator
 import com.titanmapper.service.plugin.PluginRegistryImpl
+import com.titanmapper.service.selftest.SelfTestRunnerImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -46,4 +48,5 @@ abstract class ServiceBindingsModule {
     @Binds @Singleton abstract fun pluginRegistry(impl: PluginRegistryImpl): PluginRegistry
     @Binds @Singleton abstract fun latencyMonitor(impl: LatencyMonitorImpl): LatencyMonitor
     @Binds @Singleton abstract fun performanceMonitor(impl: PerformanceMonitorImpl): PerformanceMonitor
+    @Binds @Singleton abstract fun selfTestRunner(impl: SelfTestRunnerImpl): SelfTestRunner
 }

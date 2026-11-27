@@ -18,6 +18,8 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
@@ -34,12 +36,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.titanmapper.core.model.CaptureTier
 import com.titanmapper.core.model.KeyAction
 import com.titanmapper.core.model.LogLevel
 import com.titanmapper.core.model.RawInputEvent
+import com.titanmapper.core.model.SelfTestVerdict
 import com.titanmapper.core.ui.components.TitanCard
 import com.titanmapper.core.ui.format.displayName
 import com.titanmapper.core.ui.format.formatMicros
@@ -50,6 +54,7 @@ import kotlinx.coroutines.launch
 fun DiagnosticsRoute(viewModel: DiagnosticsViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val logs by viewModel.logs.collectAsStateWithLifecycle()
+    val selfTest by viewModel.selfTest.collectAsStateWithLifecycle()
     var tab by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -59,11 +64,12 @@ fun DiagnosticsRoute(viewModel: DiagnosticsViewModel = hiltViewModel()) {
             Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Live events") })
             Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Latency & performance") })
             Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("Event log") })
+            Tab(selected = tab == 3, onClick = { tab = 3 }, text = { Text("Self-test") })
         }
         when (tab) {
             0 -> LiveEventsTab(state, viewModel::onEvent, viewModel::isBound)
             1 -> PerformanceTab(state, viewModel::onEvent)
-            else -> EventLogTab(logs, state.logFilter, viewModel::onEvent) {
+            2 -> EventLogTab(logs, state.logFilter, viewModel::onEvent) {
                 scope.launch {
                     val text = viewModel.exportText()
                     val intent = Intent(Intent.ACTION_SEND).apply {
@@ -73,6 +79,7 @@ fun DiagnosticsRoute(viewModel: DiagnosticsViewModel = hiltViewModel()) {
                     context.startActivity(Intent.createChooser(intent, "Share event log"))
                 }
             }
+            else -> SelfTestTab(selfTest, viewModel::runSelfTest)
         }
     }
 }
@@ -160,6 +167,63 @@ private fun PerformanceTab(state: DiagnosticsUiState, onEvent: (DiagnosticsUiEve
             Text("Events/sec: ${state.performance.eventsPerSecond}")
             Text("Dropped: ${state.performance.droppedEvents}")
             Text("Heap used: ${state.performance.heapUsedMb} MB")
+        }
+    }
+}
+
+@Composable
+private fun SelfTestTab(state: SelfTestUiState, onRun: () -> Unit) {
+    Column(modifier = Modifier.fillMaxSize().padding(TitanSpacing.m), verticalArrangement = Arrangement.spacedBy(TitanSpacing.s)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val passCount = state.results.count { it.verdict == SelfTestVerdict.PASS }
+            Text(
+                if (state.results.isEmpty() && !state.running) {
+                    "15 real checks against capture, dispatch, permissions and lifecycle."
+                } else {
+                    "$passCount / ${state.results.size} passed so far"
+                },
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Button(onClick = onRun, enabled = !state.running) {
+                if (state.running) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                } else {
+                    Text("Run self-test")
+                }
+            }
+        }
+        if (state.running && state.results.isEmpty()) {
+            Text(
+                "Some checks wait up to 10s for a real key/button press -- this can take a few seconds.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(TitanSpacing.xs)) {
+            items(state.results) { result -> SelfTestRow(result) }
+        }
+    }
+}
+
+@Composable
+private fun SelfTestRow(result: com.titanmapper.core.model.SelfTestResult) {
+    val (label, color) = when (result.verdict) {
+        SelfTestVerdict.PASS -> "PASS" to MaterialTheme.colorScheme.primary
+        SelfTestVerdict.FAIL -> "FAIL" to MaterialTheme.colorScheme.error
+        SelfTestVerdict.UNSUPPORTED -> "UNSUPPORTED" to MaterialTheme.colorScheme.tertiary
+        SelfTestVerdict.NOT_TESTED -> "NOT TESTED" to MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    TitanCard {
+        Column {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(result.title, style = MaterialTheme.typography.bodyMedium)
+                Text(label, style = MaterialTheme.typography.labelMedium, color = color)
+            }
+            Text(result.detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
