@@ -1,6 +1,7 @@
 package com.titanmapper.feature.mapping
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -61,6 +62,7 @@ fun MappingEditorRoute(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val profile = state.profile
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -113,11 +115,13 @@ fun MappingEditorRoute(
             tierCapability = state.tierCapabilities,
             macros = state.macros,
             plugins = state.plugins,
+            inputEvents = viewModel.inputEvents,
             newId = { viewModel.newBindingId() },
             conflictCheck = { trigger -> viewModel.conflictingBindingName(trigger, existing?.id) },
             onSave = { viewModel.onEvent(MappingEditorUiEvent.SaveBinding(it)) },
             onDismiss = { viewModel.onEvent(MappingEditorUiEvent.BeginEditBinding(null)) }
         )
+    }
     }
 }
 

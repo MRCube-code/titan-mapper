@@ -13,7 +13,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
+import kotlinx.coroutines.flow.first
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -86,6 +89,54 @@ internal object EditorKeyCodeTranslator {
             // POWER/HOME/BACK/APP_SWITCH are intentionally absent: an app never receives them as
             // key events, so they are chosen from the phone-key chips instead (see BindingEditorSheet).
         }
+    }
+}
+
+/**
+ * Tap, then press any key or mouse button: the next DOWN seen on the live input stream (the same
+ * stream the Diagnostics screen shows, which is known to see this app's keyboard/mouse input) is
+ * reported. Listening to the stream rather than to Compose key focus is what makes mouse buttons
+ * and the mouse's own G/V/F-style keys capturable at all.
+ */
+@Composable
+fun PressToCaptureBox(
+    label: String,
+    events: kotlinx.coroutines.flow.Flow<com.titanmapper.core.model.RawInputEvent>,
+    modifier: Modifier = Modifier,
+    onKey: (KeyCode) -> Unit,
+    onButton: (com.titanmapper.core.model.MouseButton) -> Unit
+) {
+    var armed by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val latestOnKey by androidx.compose.runtime.rememberUpdatedState(onKey)
+    val latestOnButton by androidx.compose.runtime.rememberUpdatedState(onButton)
+    androidx.compose.runtime.LaunchedEffect(armed) {
+        if (!armed) return@LaunchedEffect
+        val hit = events.first {
+            (it is com.titanmapper.core.model.RawInputEvent.Key && it.action == com.titanmapper.core.model.KeyAction.DOWN) ||
+                (it is com.titanmapper.core.model.RawInputEvent.Button && it.action == com.titanmapper.core.model.KeyAction.DOWN)
+        }
+        when (hit) {
+            is com.titanmapper.core.model.RawInputEvent.Key -> latestOnKey(hit.keyCode)
+            is com.titanmapper.core.model.RawInputEvent.Button -> latestOnButton(hit.button)
+            else -> Unit
+        }
+        armed = false
+    }
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .border(
+                BorderStroke(if (armed) 2.dp else 1.dp, MaterialTheme.colorScheme.primary),
+                RoundedCornerShape(8.dp)
+            )
+            .clickable { armed = !armed },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            if (armed) "Press a key or mouse button now… (tap to cancel)" else label,
+            style = MaterialTheme.typography.bodyMedium
+        )
     }
 }
 

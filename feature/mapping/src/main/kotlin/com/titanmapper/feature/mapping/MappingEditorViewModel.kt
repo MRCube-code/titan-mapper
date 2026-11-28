@@ -77,8 +77,12 @@ class MappingEditorViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: ProfileRepository,
     private val macroRepository: MacroRepository,
-    private val pluginRegistry: PluginRegistry
+    private val pluginRegistry: PluginRegistry,
+    inputEventStream: com.titanmapper.service.api.InputEventStream
 ) : ViewModel() {
+
+    /** Same live stream the Diagnostics screen reads; the binding editor listens to it to learn which key/button was pressed. */
+    val inputEvents: kotlinx.coroutines.flow.SharedFlow<com.titanmapper.core.model.RawInputEvent> = inputEventStream.events
 
     private val profileId: String = checkNotNull(savedStateHandle["profileId"])
     private val editingId = MutableStateFlow<String?>(null)

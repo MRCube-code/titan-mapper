@@ -4,6 +4,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material3.Surface
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -68,13 +72,12 @@ fun BindingEditorSheet(
     tierCapability: TierCapability,
     macros: List<MacroDefinition>,
     plugins: List<PluginInfo>,
+    inputEvents: kotlinx.coroutines.flow.Flow<com.titanmapper.core.model.RawInputEvent>,
     newId: () -> String,
     conflictCheck: (InputTrigger) -> String?,
     onSave: (Binding) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
     var triggerKind by remember { mutableStateOf(triggerKindOf(existing?.trigger)) }
     var capturedKey by remember { mutableStateOf((existing?.trigger as? InputTrigger.SingleKey)?.key ?: (existing?.trigger as? InputTrigger.Combo)?.key) }
     var modifiers by remember { mutableStateOf((existing?.trigger as? InputTrigger.Combo)?.modifiers ?: emptySet()) }
@@ -97,8 +100,16 @@ fun BindingEditorSheet(
     var mode by remember { mutableStateOf(existing?.mode ?: ActionMode.TAP) }
     var repeatMs by remember { mutableFloatStateOf((existing?.repeatIntervalMillis ?: 50L).toFloat()) }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
-        Column(modifier = Modifier.fillMaxWidth().padding(TitanSpacing.l).padding(bottom = TitanSpacing.xl), verticalArrangement = Arrangement.spacedBy(TitanSpacing.m)) {
+    // A full-screen panel inside the Activity window, NOT a ModalBottomSheet: a bottom sheet is a
+    // separate Dialog window, so key and mouse events never reached MainActivity (and therefore
+    // never reached the input bridge / live event stream) while it was open. That is why
+    // Diagnostics saw every click and key but the editor's "press a key" box saw nothing.
+    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
+        Column(
+            modifier = Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())
+                .padding(TitanSpacing.l).padding(bottom = TitanSpacing.xl),
+            verticalArrangement = Arrangement.spacedBy(TitanSpacing.m)
+        ) {
             Text(if (existing == null) "New binding" else "Edit binding", style = MaterialTheme.typography.titleLarge)
 
             Text("Trigger", style = MaterialTheme.typography.titleSmall)
@@ -108,7 +119,12 @@ fun BindingEditorSheet(
                 }
             }
             when (triggerKind) {
-                TriggerKind.KEY -> TriggerCaptureBox(label = capturedKey?.displayName() ?: "Tap here, then press a key") { capturedKey = it }
+                TriggerKind.KEY -> PressToCaptureBox(
+                    label = capturedKey?.displayName() ?: "Tap here, then press a key or mouse button",
+                    events = inputEvents,
+                    onKey = { capturedKey = it },
+                    onButton = { mouseButton = it; triggerKind = TriggerKind.MOUSE }
+                )
                 TriggerKind.COMBO -> {
                     Row { ModifierKey.entries.forEach { m ->
                         FilterChip(
@@ -116,7 +132,12 @@ fun BindingEditorSheet(
                             label = { Text(m.name) }, modifier = Modifier.padding(end = TitanSpacing.xs)
                         )
                     } }
-                    TriggerCaptureBox(label = capturedKey?.displayName() ?: "Tap here, then press the final key") { capturedKey = it }
+                    PressToCaptureBox(
+                        label = capturedKey?.displayName() ?: "Tap here, then press the final key",
+                        events = inputEvents,
+                        onKey = { capturedKey = it },
+                        onButton = { }
+                    )
                 }
                 TriggerKind.MOUSE -> Row { MouseButton.entries.forEach { b ->
                     FilterChip(selected = mouseButton == b, onClick = { mouseButton = b }, label = { Text(b.displayName()) }, modifier = Modifier.padding(end = TitanSpacing.xs))
@@ -144,7 +165,12 @@ fun BindingEditorSheet(
                 ActionKind.TOUCH_TAP -> TapSurface(tapX, tapY) { x, y -> tapX = x; tapY = y }
                 ActionKind.TOUCH_DRAG -> Text("Drag endpoints default to center-to-center; fine-tune in the overlay editor.", style = MaterialTheme.typography.bodySmall)
                 ActionKind.KEY_INJECT -> Column(verticalArrangement = Arrangement.spacedBy(TitanSpacing.xs)) {
-                    TriggerCaptureBox(label = injectKey.displayName()) { injectKey = it }
+                    PressToCaptureBox(
+                        label = injectKey.displayName() + " (tap, then press a key or mouse button to change)",
+                        events = inputEvents,
+                        onKey = { injectKey = it },
+                        onButton = { outMouseButton = it; actionKind = ActionKind.MOUSE_INJECT }
+                    )
                     Text("Or pick a phone key (can't be typed):", style = MaterialTheme.typography.bodySmall)
                     Row(modifier = Modifier.horizontalScroll(rememberScrollState())) { PHONE_OUTPUT_KEYS.forEach { k ->
                         FilterChip(selected = injectKey == k, onClick = { injectKey = k }, label = { Text(k.displayName()) }, modifier = Modifier.padding(end = TitanSpacing.xs))
