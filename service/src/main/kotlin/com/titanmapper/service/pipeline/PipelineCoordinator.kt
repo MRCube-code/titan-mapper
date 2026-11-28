@@ -15,6 +15,7 @@ import com.titanmapper.service.engine.MappingEngine
 import com.titanmapper.service.engine.PointerTransform
 import com.titanmapper.service.input.InputEventBus
 import com.titanmapper.service.tier.AccessibilityTier
+import com.titanmapper.service.tier.FallbackSink
 import com.titanmapper.service.tier.RootTier
 import com.titanmapper.service.tier.ShizukuTier
 import com.titanmapper.service.tier.StandardTier
@@ -160,6 +161,7 @@ class PipelineCoordinator @Inject constructor(
                 actor?.cancelAndJoin()
                 engine?.releaseAll()
                 activeBackend?.stop()
+                shizukuTier.stop()
                 engine = null
                 activeBackend = null
                 performanceMonitor.stop()
@@ -283,6 +285,7 @@ class PipelineCoordinator @Inject constructor(
     private suspend fun switchTierInternal(tier: PermissionTier): Boolean {
         engine?.releaseAll()
         activeBackend?.stop()
+        shizukuTier.stop() // also releases it if it was only borrowed for key output
         activeBackend = null
         engine = null
 
@@ -291,7 +294,18 @@ class PipelineCoordinator @Inject constructor(
         if (!started) return false // fields stay null: no stale backend/engine left behind
 
         activeBackend = backend
-        val newEngine = MappingEngine(backend.sink, scope) { resolved ->
+        // Accessibility/Standard/Root can't all type keys system-wide. If Shizuku is already
+        // running AND already permitted, borrow it for key output only (never prompts here).
+        val borrowShizuku = backend.tier != CaptureTier.SHIZUKU && shizukuTier.startIfPermitted()
+        val sink = if (backend.tier == CaptureTier.SHIZUKU) backend.sink
+        else FallbackSink(backend.sink, shizukuTier.sink) { shizukuTier.isReady() }
+        eventLog.log(
+            LogLevel.INFO, "Pipeline",
+            if (borrowShizuku) "Key output for ${tier.name} will be sent through Shizuku"
+            else if (backend.tier == CaptureTier.SHIZUKU) "Key output via Shizuku"
+            else "Shizuku not running/permitted: key output (remap to a key) is NOT available on ${tier.name}"
+        )
+        val newEngine = MappingEngine(sink, scope) { resolved ->
             latencyMonitor.record(resolved.latencyNanos)
             if (!resolved.accepted) {
                 eventLog.log(

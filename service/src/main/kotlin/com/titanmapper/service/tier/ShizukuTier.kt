@@ -182,6 +182,21 @@ class ShizukuTier @Inject constructor(
         injectMethod = null
     }
 
+    /**
+     * Binds the input-injection binder WITHOUT ever prompting: used when another tier (e.g.
+     * Accessibility) owns capture and Shizuku is only borrowed for the key output that tier cannot
+     * produce. Returns false (and does nothing) if Shizuku isn't running or permission wasn't
+     * already granted -- the permission dialog is only ever raised by [start] on the Shizuku tier.
+     */
+    fun startIfPermitted(): Boolean {
+        if (!Shizuku.pingBinder()) return false
+        if (Shizuku.checkSelfPermission() != android.content.pm.PackageManager.PERMISSION_GRANTED) return false
+        return bindInputManager()
+    }
+
+    /** True once the injection binder is bound (by [start] or [startIfPermitted]). */
+    fun isReady(): Boolean = inputManagerBinder != null && injectMethod != null
+
     override fun isHealthy(): Boolean = Shizuku.pingBinder() &&
         Shizuku.checkSelfPermission() == android.content.pm.PackageManager.PERMISSION_GRANTED &&
         inputManagerBinder != null
